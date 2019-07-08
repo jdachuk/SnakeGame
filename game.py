@@ -14,17 +14,18 @@ class Const:
     SPEED_INCREASE = 50
     DELAY = 300
     MIN_DELAY = 50
-    DOT_SIZE = 20
+    SQUARE_SIZE = 20
+    NUM_OF_SQUARES = 30
 
     G_F_S = 20  # Game Board font size
     G_F = ('no font', G_F_S)  # Game Board font
 
-    G_B_W = 30 * DOT_SIZE  # Game Board width
-    G_B_H = 30 * DOT_SIZE  # Game Board height
+    G_B_W = NUM_OF_SQUARES * SQUARE_SIZE  # Game Board width
+    G_B_H = NUM_OF_SQUARES * SQUARE_SIZE  # Game Board height
     G_B_BG = '#5B5B5B'  # Game Board background color
 
     MIN_RAND_POS = 0
-    MAX_RAND_POS = G_B_W // DOT_SIZE - 1
+    MAX_RAND_POS = G_B_W // SQUARE_SIZE - 1
 
     S_F_S = 10  # Score Board font size
     S_F = ('no font', S_F_S)  # Score Board font
@@ -33,8 +34,15 @@ class Const:
     S_B_H = G_B_H  # Score Board height
     S_B_BG = '#3A3A3A'  # Score Board background
 
+    RIGHT_KEY = 'Right'
+    DOWN_KEY = 'Down'
+    LEFT_KEY = 'Left'
+    UP_KEY = 'Up'
+    DIRECTION_KEYS = [RIGHT_KEY, DOWN_KEY, LEFT_KEY, UP_KEY]
+
 
 class Position:
+
     def __init__(self, x, y):
         self.x = x
         self.y = y
@@ -62,6 +70,7 @@ class Position:
 
 
 class Move:
+
     def __init__(self, move_x, move_y):
         self.move_x = move_x
         self.move_y = move_y
@@ -69,9 +78,11 @@ class Move:
     def __mul__(self, other):
         if isinstance(other, int):
             return Move(self.move_x * other, self.move_y * other)
+        elif isinstance(other, Move):
+            return Move(self.move_x * other.move_x, self.move_y * other.move_y)
 
 
-class Direction:
+class Direction(Move):
     UP = Move(0, -1)
     DOWN = Move(0, 1)
     LEFT = Move(-1, 0)
@@ -79,6 +90,7 @@ class Direction:
 
 
 class GameObject:
+
     def __init__(self, canvas, name, position):
         self._canvas = canvas
         self.name = name
@@ -102,6 +114,7 @@ class GameObject:
 
 
 class SnakeHead(GameObject):
+
     def __init__(self, canvas, position):
         super().__init__(canvas, 'head', position)
         self.image = ImageTk.PhotoImage(Image.open('images/head.png'))
@@ -117,35 +130,44 @@ class SnakeTail(GameObject):
 class Apple(GameObject):
 
     def __init__(self, canvas):
-        rx = random.randint(Const.MIN_RAND_POS, Const.MAX_RAND_POS) * Const.DOT_SIZE
-        ry = random.randint(Const.MIN_RAND_POS, Const.MAX_RAND_POS) * Const.DOT_SIZE
-        super().__init__(canvas, 'tail', Position(rx, ry))
+        rx = random.randint(Const.MIN_RAND_POS, Const.MAX_RAND_POS) * Const.SQUARE_SIZE
+        ry = random.randint(Const.MIN_RAND_POS, Const.MAX_RAND_POS) * Const.SQUARE_SIZE
+        super().__init__(canvas, 'apple', Position(rx, ry))
         self.image = ImageTk.PhotoImage(Image.open('images/apple.png'))
+
+        self.draw()
 
 
 class Snake:
+
     def __init__(self, canvas):
+
         self._canvas = canvas
 
-        self._head = SnakeHead(canvas, Position(5, 5) * Const.DOT_SIZE)
+        self._head = SnakeHead(canvas, Position(5, 5) * Const.SQUARE_SIZE)
         self._tail = [
-            SnakeTail(canvas, Position(3, 5) * Const.DOT_SIZE),
-            SnakeTail(canvas, Position(4, 5) * Const.DOT_SIZE)
+            SnakeTail(canvas, Position(3, 5) * Const.SQUARE_SIZE),
+            SnakeTail(canvas, Position(4, 5) * Const.SQUARE_SIZE)
         ]
 
         self.direction = Direction.RIGHT
-        self.move = self.direction * Const.DOT_SIZE
+        self.move = self.direction * Const.SQUARE_SIZE
 
         self.alive = True
 
+        self.draw()
+
     def draw(self):
+
         self._head.draw()
         for tail in self._tail:
             tail.draw()
 
     def make_turn(self):
-        self.check_collisions()
-        self.check_apple_collision()
+
+        future_pos = Position(self.head_x, self.head_y) + self.direction * Const.SQUARE_SIZE
+
+        self.check_collisions(future_pos)
 
         if self.alive:
             for idx in range(len(self._tail)):
@@ -159,37 +181,48 @@ class Snake:
                 move = c2 - c1
                 self._tail[idx].move(move)
 
-            self.move = self.direction * Const.DOT_SIZE
+            self.move = self.direction * Const.SQUARE_SIZE
             self._head.move(self.move)
 
-    def check_apple_collision(self):
-        apples = self._canvas.apples
+        self.check_apple_collision(future_pos)
 
-        for apple in apples:
-            apple_pos = apple.position
-            if apple_pos == self._head.position:
+    def check_apple_collision(self, future_pos):
+
+        for apple in self._canvas.apples:
+
+            if apple.position == future_pos:
+
                 self._canvas.update_score()
                 self._canvas.delete_apple(apple)
 
-                tail = SnakeTail(self._canvas, apple_pos)
+                tail = SnakeTail(self._canvas, self._tail[-1].position)
                 tail.draw()
                 self._tail.append(tail)
 
                 self._canvas.locate_apples()
 
-    def check_collisions(self):
+    def check_collisions(self, future_pos):
         """Check collisions with snake tail or borders"""
         for tail in self._tail:
             if tail.position == self._head.position:
                 self.alive = False
                 self._canvas.game_over()
 
-        if self._head.position.x < 0 or \
-                self._head.position.x > Const.G_B_W - Const.DOT_SIZE or \
-                self._head.position.y < 0 or \
-                self._head.position.y > Const.G_B_H - Const.DOT_SIZE:
+        if future_pos.x < 0 or future_pos.x > Const.G_B_W - Const.SQUARE_SIZE or \
+                future_pos.y < 0 or future_pos.y > Const.G_B_H - Const.SQUARE_SIZE:
+
             self.alive = False
             self._canvas.game_over()
+
+    def change_direction(self, new_direction):
+        if new_direction == 'Left' and self.move_x == 0:
+            self.direction = Direction.LEFT
+        elif new_direction == 'Right' and self.move_x == 0:
+            self.direction = Direction.RIGHT
+        elif new_direction == 'Up' and self.move_y == 0:
+            self.direction = Direction.UP
+        elif new_direction == 'Down' and self.move_y == 0:
+            self.direction = Direction.DOWN
 
     @property
     def move_x(self):
@@ -199,25 +232,29 @@ class Snake:
     def move_y(self):
         return self.move.move_y
 
+    @property
+    def head_x(self):
+        return self._head.position.x
+
+    @property
+    def head_y(self):
+        return self._head.position.y
+
 
 class GameBoard(tk.Canvas):
     """Game Board"""
 
     class ControlKeys:
         """Keys"""
-        # In-game controls
-        LEFT_KEY = 'Left'  # Move left
-        RIGHT_KEY = 'Right'  # Move right
-        UP_KEY = 'Up'  # Move up
-        DOWN_KEY = 'Down'  # Move down
         SPACE_KEY = 'space'  # Pause
-        # Out of game controls
         RETURN_KEY = 'Return'  # Replay
         SHIFT_L_KEY = 'Shift_L'  # Turn on/off level system
         SHIFT_R_KEY = 'Shift_R'  # Turn on/off level system
 
-    def __init__(self, score_board):
+    def __init__(self, statistic_board):
         """Initialize game board"""
+        super().__init__(width=Const.G_B_W, height=Const.G_B_H,
+                         background=Const.G_B_BG)
         # Initial data
         # Game data
         self.in_game = True
@@ -232,10 +269,7 @@ class GameBoard(tk.Canvas):
         self.apples = []
         # End of initial data
 
-        self.score_board = score_board
-
-        super().__init__(width=Const.G_B_W, height=Const.G_B_H,
-                         background=Const.G_B_BG, highlightthickness=0)
+        self.statistic_board = statistic_board
 
         # Bind controls
         self.bind_all('<Key>', self.on_key_pressed)
@@ -244,12 +278,8 @@ class GameBoard(tk.Canvas):
 
     def init_game(self):
         """Initialize game objects and starts game"""
-        self.snake.draw()
         self.locate_apples()
-        try:
-            self.score_board.update_info(self.level, self.score, self.high_score)
-        except AttributeError:
-            print('Score board is not defined!')
+        self.statistic_board.update_info(self.level, self.score, self.high_score)
 
         self.after(Const.DELAY, self.on_timer)
 
@@ -257,7 +287,6 @@ class GameBoard(tk.Canvas):
         """Locating an apple"""
         while len(self.apples) < self.level:
             apple = Apple(self)
-            apple.draw()
             self.apples.append(apple)
 
     def delete_apple(self, apple):
@@ -272,14 +301,8 @@ class GameBoard(tk.Canvas):
         if self.in_game:
 
             # Move directions
-            if key == self.ControlKeys.LEFT_KEY and self.snake.move_x == 0:
-                self.snake.direction = Direction.LEFT
-            elif key == self.ControlKeys.RIGHT_KEY and self.snake.move_x == 0:
-                self.snake.direction = Direction.RIGHT
-            elif key == self.ControlKeys.UP_KEY and self.snake.move_y == 0:
-                self.snake.direction = Direction.UP
-            elif key == self.ControlKeys.DOWN_KEY and self.snake.move_y == 0:
-                self.snake.direction = Direction.DOWN
+            if key in Const.DIRECTION_KEYS:
+                self.snake.change_direction(key)
 
             # Pause
             elif key == self.ControlKeys.SPACE_KEY:
@@ -308,10 +331,7 @@ class GameBoard(tk.Canvas):
     def update_score(self):
         """Updates score"""
         self.score += 1
-        try:
-            self.score_board.update_score(self.score)
-        except AttributeError:
-            print('Score board is not defined!')
+        self.statistic_board.update_score(self.score)
 
     def game_over(self):
         """Game Over"""
@@ -319,10 +339,7 @@ class GameBoard(tk.Canvas):
 
         if self.score > self.high_score:
             self.high_score = self.score
-        try:
-            self.score_board.update_high_score(self.high_score)
-        except AttributeError:
-            print('Score board is not defined!')
+            self.statistic_board.update_high_score(self.high_score)
 
         font_size = Const.G_F_S
         font = Const.G_F
@@ -353,10 +370,7 @@ class GameBoard(tk.Canvas):
         """Check for level up"""
         if self.score / self.level > 10 and self.level_system:
             self.level += 1
-            try:
-                self.score_board.update_level(self.level)
-            except AttributeError:
-                print('Score board is not defined!')
+            self.statistic_board.update_level(self.level)
             self.locate_apples()
 
     def replay(self):
@@ -373,13 +387,10 @@ class GameBoard(tk.Canvas):
 
     def switch_level_system(self):
         self.level_system = not self.level_system
-        try:
-            self.score_board.switch_level_system()
-        except AttributeError:
-            print('Score board is not defined!')
+        self.statistic_board.switch_level_system()
 
 
-class ScoreBoard(tk.Canvas):
+class StatisticBoard(tk.Canvas):
     """Score Board"""
 
     def __init__(self):
@@ -443,10 +454,10 @@ class SnakeGame(tk.Frame):
 
         self.master.title('Snake Game')
 
-        self.score_board = ScoreBoard()
-        self.board = GameBoard(score_board=self.score_board)
+        self.statistic_board = StatisticBoard()
+        self.board = GameBoard(statistic_board=self.statistic_board)
 
-        self.score_board.grid(column=0, row=0)
+        self.statistic_board.grid(column=0, row=0)
         self.board.grid(column=1, row=0)
 
 
