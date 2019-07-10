@@ -83,10 +83,10 @@ class Move:
 
 
 class Direction(Move):
-    UP = Move(0, -1)
-    DOWN = Move(0, 1)
-    LEFT = Move(-1, 0)
-    RIGHT = Move(1, 0)
+    NORTH = Move(0, -1)
+    EAST = Move(1, 0)
+    SOUTH = Move(0, 1)
+    WEST = Move(-1, 0)
 
 
 class GameObject:
@@ -140,27 +140,25 @@ class Apple(GameObject):
 
 class Snake:
 
-    def __init__(self, canvas):
+    def __init__(self, game, canvas):
+        self.game = game
+        self.canvas = canvas
 
-        self._canvas = canvas
-
-        self._head = SnakeHead(canvas, Position(5, 5) * Const.SQUARE_SIZE)
-        self._tail = [
+        self.head = SnakeHead(canvas, Position(5, 5) * Const.SQUARE_SIZE)
+        self.tail = [
             SnakeTail(canvas, Position(3, 5) * Const.SQUARE_SIZE),
             SnakeTail(canvas, Position(4, 5) * Const.SQUARE_SIZE)
         ]
 
-        self.direction = Direction.RIGHT
+        self.direction = Direction.EAST
         self.move = self.direction * Const.SQUARE_SIZE
 
         self.alive = True
 
-        self.draw()
-
     def draw(self):
 
-        self._head.draw()
-        for tail in self._tail:
+        self.head.draw()
+        for tail in self.tail:
             tail.draw()
 
     def make_turn(self):
@@ -170,59 +168,57 @@ class Snake:
         self.check_collisions(future_pos)
 
         if self.alive:
-            for idx in range(len(self._tail)):
-                c1 = self._tail[idx].position
+            for idx in range(len(self.tail)):
+                c1 = self.tail[idx].position
 
                 try:
-                    c2 = self._tail[idx + 1].position
+                    c2 = self.tail[idx + 1].position
                 except IndexError:
-                    c2 = self._head.position
+                    c2 = self.head.position
 
                 move = c2 - c1
-                self._tail[idx].move(move)
+                self.tail[idx].move(move)
 
             self.move = self.direction * Const.SQUARE_SIZE
-            self._head.move(self.move)
+            self.head.move(self.move)
 
         self.check_apple_collision(future_pos)
 
     def check_apple_collision(self, future_pos):
 
-        for apple in self._canvas.apples:
+        for apple in self.game.apples:
 
             if apple.position == future_pos:
+                self.game.update_score()
+                self.game.delete_apple(apple)
 
-                self._canvas.update_score()
-                self._canvas.delete_apple(apple)
-
-                tail = SnakeTail(self._canvas, self._tail[-1].position)
+                tail = SnakeTail(self.canvas, self.tail[-1].position)
                 tail.draw()
-                self._tail.append(tail)
+                self.tail.append(tail)
 
-                self._canvas.locate_apples()
+                self.game.locate_apples()
 
     def check_collisions(self, future_pos):
         """Check collisions with snake tail or borders"""
-        for tail in self._tail:
-            if tail.position == self._head.position:
+        for tail in self.tail:
+            if tail.position == self.head.position:
                 self.alive = False
-                self._canvas.game_over()
+                self.canvas.game_over()
 
         if future_pos.x < 0 or future_pos.x > Const.G_B_W - Const.SQUARE_SIZE or \
                 future_pos.y < 0 or future_pos.y > Const.G_B_H - Const.SQUARE_SIZE:
-
             self.alive = False
-            self._canvas.game_over()
+            self.game.game_over()
 
     def change_direction(self, new_direction):
         if new_direction == 'Left' and self.move_x == 0:
-            self.direction = Direction.LEFT
+            self.direction = Direction.WEST
         elif new_direction == 'Right' and self.move_x == 0:
-            self.direction = Direction.RIGHT
+            self.direction = Direction.EAST
         elif new_direction == 'Up' and self.move_y == 0:
-            self.direction = Direction.UP
+            self.direction = Direction.NORTH
         elif new_direction == 'Down' and self.move_y == 0:
-            self.direction = Direction.DOWN
+            self.direction = Direction.SOUTH
 
     @property
     def move_x(self):
@@ -234,160 +230,26 @@ class Snake:
 
     @property
     def head_x(self):
-        return self._head.position.x
+        return self.head.position.x
 
     @property
     def head_y(self):
-        return self._head.position.y
+        return self.head.position.y
 
 
 class GameBoard(tk.Canvas):
     """Game Board"""
 
-    class ControlKeys:
-        """Keys"""
-        SPACE_KEY = 'space'  # Pause
-        RETURN_KEY = 'Return'  # Replay
-        SHIFT_L_KEY = 'Shift_L'  # Turn on/off level system
-        SHIFT_R_KEY = 'Shift_R'  # Turn on/off level system
-
-    def __init__(self, statistic_board):
+    def __init__(self):
         """Initialize game board"""
         super().__init__(width=Const.G_B_W, height=Const.G_B_H,
                          background=Const.G_B_BG)
-        # Initial data
-        # Game data
-        self.in_game = True
-        self.paused = False
-        self.score = 0
-        self.high_score = 0
-        self.level = 1
-        self.level_system = True  # Enable or disable level system in the game
 
-        # Moves data
-        self.snake = Snake(self)
-        self.apples = []
-        # End of initial data
+    def check_apple_in_pos(self, position):
+        return 'apple' in self.gettags(self.find_in_position(position))
 
-        self.statistic_board = statistic_board
-
-        # Bind controls
-        self.bind_all('<Key>', self.on_key_pressed)
-
-        self.init_game()
-
-    def init_game(self):
-        """Initialize game objects and starts game"""
-        self.locate_apples()
-        self.statistic_board.update_info(self.level, self.score, self.high_score)
-
-        self.after(Const.DELAY, self.on_timer)
-
-    def locate_apples(self):
-        """Locating an apple"""
-        while len(self.apples) < self.level:
-            apple = Apple(self)
-            self.apples.append(apple)
-
-    def delete_apple(self, apple):
-        """Removes apple"""
-        self.apples.remove(apple)
-        apple.delete()
-
-    def on_key_pressed(self, event):
-        """Key pressed listener"""
-        key = event.keysym
-
-        if self.in_game:
-
-            # Move directions
-            if key in Const.DIRECTION_KEYS:
-                self.snake.change_direction(key)
-
-            # Pause
-            elif key == self.ControlKeys.SPACE_KEY:
-                if not self.paused:
-                    self.pause()
-                else:
-                    self.unpause()
-        else:
-            if key == self.ControlKeys.RETURN_KEY:
-                self.replay()
-            elif key == self.ControlKeys.SHIFT_L_KEY or key == self.ControlKeys.SHIFT_R_KEY:
-                self.switch_level_system()
-
-    def on_timer(self):
-        """On timer tick function"""
-        if not self.paused and self.in_game:
-            self.snake.make_turn()
-            self.check_level_up()
-
-            delay = Const.DELAY - (self.level - 1) * Const.SPEED_INCREASE
-            if delay >= Const.MIN_DELAY:
-                self.after(delay, self.on_timer)
-            else:
-                self.after(Const.MIN_DELAY, self.on_timer)
-
-    def update_score(self):
-        """Updates score"""
-        self.score += 1
-        self.statistic_board.update_score(self.score)
-
-    def game_over(self):
-        """Game Over"""
-        self.in_game = False
-
-        if self.score > self.high_score:
-            self.high_score = self.score
-            self.statistic_board.update_high_score(self.high_score)
-
-        font_size = Const.G_F_S
-        font = Const.G_F
-
-        self.create_text(self.winfo_width() / 2, self.winfo_height() / 2 - 4 * font_size,
-                         text=f'Game Over!', fill='white', font=font)
-        self.create_text(self.winfo_width() / 2, self.winfo_height() / 2 - 2 * font_size,
-                         text=f'Score: {self.score}', fill='white', font=font)
-        self.create_text(self.winfo_width() / 2, self.winfo_height() / 2 - 1 * font_size,
-                         text=f'High Score: {self.high_score}', fill='white', font=font)
-        self.create_text(self.winfo_width() / 2, self.winfo_height() / 2 + 3 * font_size,
-                         text='Play again? Press ENTER!', fill='white', font=font)
-
-    def pause(self):
-        """Pause the game"""
-        self.paused = True
-        self.create_text(self.winfo_width() / 2, self.winfo_height() / 2,
-                         text='Pause', fill='white', tag='pause', font=Const.G_F)
-
-    def unpause(self):
-        """Unpause the game"""
-        self.paused = False
-        pause = self.find_withtag('pause')
-        self.delete(pause)
-        self.on_timer()
-
-    def check_level_up(self):
-        """Check for level up"""
-        if self.score / self.level > 10 and self.level_system:
-            self.level += 1
-            self.statistic_board.update_level(self.level)
-            self.locate_apples()
-
-    def replay(self):
-        """Replay"""
-        self.delete(tk.ALL)
-        self.level = 1
-        self.score = 0
-        self.in_game = True
-
-        self.snake = Snake(self)
-        self.apples = []
-
-        self.init_game()
-
-    def switch_level_system(self):
-        self.level_system = not self.level_system
-        self.statistic_board.switch_level_system()
+    def find_in_position(self, position):
+        return self.find_overlapping(position.x, position.y, position.x, position.y)
 
 
 class StatisticBoard(tk.Canvas):
@@ -449,16 +311,152 @@ class StatisticBoard(tk.Canvas):
 
 class SnakeGame(tk.Frame):
 
+    class ControlKeys:
+        """Keys"""
+        SPACE_KEY = 'space'  # Pause
+        RETURN_KEY = 'Return'  # Replay
+        SHIFT_L_KEY = 'Shift_L'  # Turn on/off level system
+        SHIFT_R_KEY = 'Shift_R'  # Turn on/off level system
+
     def __init__(self):
         super().__init__()
 
         self.master.title('Snake Game')
 
         self.statistic_board = StatisticBoard()
-        self.board = GameBoard(statistic_board=self.statistic_board)
+        self.board = GameBoard()
+
+        self.level = 1
+        self.score = 0
+        self.high_score = 0
+
+        self.apples = []
+        self.snake = Snake(self, self.board)
+
+        self.paused = False
+        self.in_game = True
+        self.level_system = True
+
+        self.bind_all('<Key>', self.on_key_pressed)
 
         self.statistic_board.grid(column=0, row=0)
         self.board.grid(column=1, row=0)
+
+        self.init_game()
+
+    def init_game(self):
+        """Initialize game objects and starts game"""
+        self.snake.draw()
+        self.locate_apples()
+        self.statistic_board.update_info(self.level, self.score, self.high_score)
+
+        self.after(Const.DELAY, self.on_timer)
+
+    def locate_apples(self):
+        """Locating an apple"""
+        while len(self.apples) < self.level:
+            apple = Apple(self.board)
+            self.apples.append(apple)
+
+    def on_timer(self):
+        """On timer tick function"""
+        if not self.paused and self.in_game:
+            self.snake.make_turn()
+            self.check_level_up()
+
+            delay = Const.DELAY - (self.level - 1) * Const.SPEED_INCREASE
+            if delay >= Const.MIN_DELAY:
+                self.after(delay, self.on_timer)
+            else:
+                self.after(Const.MIN_DELAY, self.on_timer)
+
+    def delete_apple(self, apple):
+        """Removes apple"""
+        self.apples.remove(apple)
+        apple.delete()
+
+    def check_level_up(self):
+        """Check for level up"""
+        if self.score / self.level > 10 and self.level_system:
+            self.level += 1
+            self.statistic_board.update_level(self.level)
+            self.locate_apples()
+
+    def update_score(self):
+        """Updates score"""
+        self.score += 1
+        self.statistic_board.update_score(self.score)
+
+    def replay(self):
+        """Replay"""
+        self.board.delete(tk.ALL)
+        self.level = 1
+        self.score = 0
+        self.in_game = True
+
+        self.snake = Snake(self, self.board)
+        self.apples = []
+
+        self.init_game()
+
+    def switch_level_system(self):
+        self.level_system = not self.level_system
+        self.statistic_board.switch_level_system()
+
+    def pause(self):
+        """Pause the game"""
+        self.paused = True
+        self.board.create_text(self.board.winfo_width() / 2, self.board.winfo_height() / 2,
+                               text='Pause', fill='white', tag='pause', font=Const.G_F)
+
+    def unpause(self):
+        """Unpause the game"""
+        self.paused = False
+        pause = self.board.find_withtag('pause')
+        self.board.delete(pause)
+        self.on_timer()
+
+    def on_key_pressed(self, event):
+        """Key pressed listener"""
+        key = event.keysym
+
+        if self.in_game:
+
+            # Move directions
+            if key in Const.DIRECTION_KEYS:
+                self.snake.change_direction(key)
+
+            # Pause
+            elif key == self.ControlKeys.SPACE_KEY:
+                if not self.paused:
+                    self.pause()
+                else:
+                    self.unpause()
+        else:
+            if key == self.ControlKeys.RETURN_KEY:
+                self.replay()
+            elif key == self.ControlKeys.SHIFT_L_KEY or key == self.ControlKeys.SHIFT_R_KEY:
+                self.switch_level_system()
+
+    def game_over(self):
+        """Game Over"""
+        self.in_game = False
+
+        if self.score > self.high_score:
+            self.high_score = self.score
+            self.statistic_board.update_high_score(self.high_score)
+
+        font_size = Const.G_F_S
+        font = Const.G_F
+
+        self.board.create_text(self.board.winfo_width() / 2, self.board.winfo_height() / 2 - 4 * font_size,
+                               text=f'Game Over!', fill='white', font=font)
+        self.board.create_text(self.board.winfo_width() / 2, self.board.winfo_height() / 2 - 2 * font_size,
+                               text=f'Score: {self.score}', fill='white', font=font)
+        self.board.create_text(self.board.winfo_width() / 2, self.board.winfo_height() / 2 - 1 * font_size,
+                               text=f'High Score: {self.high_score}', fill='white', font=font)
+        self.board.create_text(self.board.winfo_width() / 2, self.board.winfo_height() / 2 + 3 * font_size,
+                               text='Play again? Press ENTER!', fill='white', font=font)
 
 
 if __name__ == '__main__':
