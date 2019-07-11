@@ -37,20 +37,14 @@ class SnakeHead(GameObject):
 
     def __init__(self, canvas, position):
         super().__init__(canvas, 'head', position)
-        try:
-            self.image = ImageTk.PhotoImage(Image.open('images/head.png'))
-        except Exception:
-            self.image = None
+        self.image = ImageTk.PhotoImage(Image.open('images/head.png'))
 
 
 class SnakeTail(GameObject):
 
     def __init__(self, canvas, position):
         super().__init__(canvas, 'tail', position)
-        try:
-            self.image = ImageTk.PhotoImage(Image.open('images/tail.png'))
-        except Exception:
-            self.image = None
+        self.image = ImageTk.PhotoImage(Image.open('images/tail.png'))
 
 
 class Food(GameObject):
