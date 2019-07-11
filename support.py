@@ -4,11 +4,36 @@ created: 7/10/19
 """
 
 
+class Move:
+
+    def __init__(self, move_x, move_y):
+        self.move_x = move_x
+        self.move_y = move_y
+
+    def __mul__(self, other):
+        if isinstance(other, int):
+            return Move(self.move_x * other, self.move_y * other)
+        elif isinstance(other, Move):
+            return Move(self.move_x * other.move_x, self.move_y * other.move_y)
+
+
+class Direction(Move):
+    NORTH = Move(0, -1)
+    EAST = Move(1, 0)
+    SOUTH = Move(0, 1)
+    WEST = Move(-1, 0)
+
+    NORTH_EAST = Move(1, -1)
+    SOUTH_EAST = Move(1, 1)
+    SOUTH_WEST = Move(-1, 1)
+    NORTH_WEST = Move(-1, -1)
+
+
 class Const:
     """Constants for Snake Game"""
     SPEED_INCREASE = 50
     DELAY = 300
-    MIN_DELAY = 50
+    MIN_DELAY = 64
     SQUARE_SIZE = 20
     NUM_OF_SQUARES = 30
 
@@ -25,7 +50,7 @@ class Const:
     S_F_S = 10  # Score Board font size
     S_F = ('no font', S_F_S)  # Score Board font
 
-    S_B_W = 120  # Score Board width
+    S_B_W = 160  # Score Board width
     S_B_H = G_B_H  # Score Board height
     S_B_BG = '#3A3A3A'  # Score Board background
 
@@ -34,6 +59,10 @@ class Const:
     LEFT_KEY = 'Left'
     UP_KEY = 'Up'
     DIRECTION_KEYS = [RIGHT_KEY, DOWN_KEY, LEFT_KEY, UP_KEY]
+    DIRECTIONS = [
+                Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST,
+                Direction.SOUTH, Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST
+            ]
 
 
 class Position:
@@ -62,23 +91,3 @@ class Position:
         if not isinstance(other, Position):
             return False
         return self.x == other.x and self.y == other.y
-
-
-class Move:
-
-    def __init__(self, move_x, move_y):
-        self.move_x = move_x
-        self.move_y = move_y
-
-    def __mul__(self, other):
-        if isinstance(other, int):
-            return Move(self.move_x * other, self.move_y * other)
-        elif isinstance(other, Move):
-            return Move(self.move_x * other.move_x, self.move_y * other.move_y)
-
-
-class Direction(Move):
-    NORTH = Move(0, -1)
-    EAST = Move(1, 0)
-    SOUTH = Move(0, 1)
-    WEST = Move(-1, 0)

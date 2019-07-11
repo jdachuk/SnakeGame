@@ -42,9 +42,9 @@ class StatisticBoard(tk.Canvas):
         if self.display_level:
             self.create_text(10, 10, text=f'Level: {self.level}', font=Const.S_F,
                              fill='white', anchor=tk.W, tag='level')
-        self.create_text(10, 20, text=f'Score: {self.score}', font=Const.S_F,
+        self.create_text(10, 30, text=f'Score: {self.score}', font=Const.S_F,
                          fill='white', anchor=tk.W, tag='score')
-        self.create_text(10, 30, text=f'High Score: {self.high_score}', font=Const.S_F,
+        self.create_text(10, 50, text=f'High Score: {self.high_score}', font=Const.S_F,
                          fill='white', anchor=tk.W, tag='h_score')
 
     def update_level(self, level):
@@ -77,3 +77,38 @@ class StatisticBoard(tk.Canvas):
                              fill='white', anchor=tk.W, tag='level')
         else:
             self.delete(self.find_withtag('level'))
+
+
+class StatisticBoardAI(StatisticBoard):
+    def __init__(self, snakes_total):
+        self.generation_id = 0
+        self.snake_id = 0
+        self.snakes_total = snakes_total
+
+        super().__init__()
+
+    def create_objects(self):
+        if self.display_level:
+            self.create_text(10, 10, text=f'Level: {self.level}', font=Const.S_F,
+                             fill='white', anchor=tk.W, tag='level')
+        self.create_text(10, 30, text=f'Score: {self.score}', font=Const.S_F,
+                         fill='white', anchor=tk.W, tag='score')
+        self.create_text(10, 50, text=f'High Score: {self.high_score}', font=Const.S_F,
+                         fill='white', anchor=tk.W, tag='h_score')
+        self.create_text(10, 70, text=f'Generation: {self.generation_id}', font=Const.S_F,
+                         fill='white', anchor=tk.W, tag='population')
+        self.create_text(10, 90, text=f'Snake: {self.snake_id}/{self.snakes_total}', font=Const.S_F,
+                         fill='white', anchor=tk.W, tag='snake')
+
+    def update_population(self, population_id):
+        self.generation_id = population_id
+        self.itemconfigure('population', text=f'Generation: {self.generation_id}')
+
+    def update_snake(self, snake_id):
+        self.snake_id = snake_id
+        self.itemconfigure('snake', text=f'Snake: {self.snake_id}/{self.snakes_total}')
+
+    def update_info_(self, level, score, h_score, population_id, snake_id):
+        super().update_info(level, score, h_score)
+        self.update_population(population_id)
+        self.update_snake(snake_id)
