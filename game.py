@@ -259,12 +259,14 @@ class SnakeGameAI(SnakeGame):
                 if len(item) > 0:
                     item_tag = self.board.gettags(item)
                     if 'tail' in item_tag:
-                        dir_data[0] = distance
+                        dir_data[0] = 1 / distance
+                        break
                     elif 'apple' in item_tag:
-                        dir_data[1] = distance
+                        dir_data[1] = 1 / distance
+                        break
                 pos = pos + Move(Const.SQUARE_SIZE, Const.SQUARE_SIZE) * direction
             else:
-                dir_data[2] = distance
+                dir_data[2] = 1 / distance
 
             return dir_data
 

@@ -4,6 +4,7 @@ created: 7/10/19
 """
 
 import random
+import threading
 from snake import SmartSnake
 
 
@@ -17,7 +18,11 @@ class Population:
         self.generation_id = 0
         self.done = False
 
-        self.create_snakes()
+        chose = input('Load last generation?[y/n] ')
+        if chose.lower() == 'y':
+            self.load_last_generation()
+        else:
+            self.create_snakes()
 
     def create_snakes(self):
         for _ in range(self.size):
@@ -31,48 +36,60 @@ class Population:
     def sort_snakes_by_score(self):
         self.snakes.sort(key=lambda snake: snake.score)
 
-    def kill_worst(self, n=None):
+    def select_best(self, n=None):
         if n is None:
             n = len(self.snakes) // 2
-        self.sort_snakes_by_score()
-        self.snakes = self.snakes[n:]
-
-    def select_snake(self):
-        score_sum = 0
+        mean_score = 0
         for snake in self.snakes:
-            score_sum += snake.score
-
-        rand = random.randint(0, score_sum)
-
-        selection_sum = 0
+            mean_score += snake.score
+        mean_score /= len(self.snakes)
+        result = []
         for snake in self.snakes:
-            selection_sum += snake.score
-            if selection_sum > rand:
+            if snake.score >= mean_score:
+                result.append(snake.clone())
+            if len(result) >= n:
+                break
+        return result
+
+    @staticmethod
+    def select_snake(snakes):
+        max_score = 0
+        mean_score = 0
+
+        for snake in snakes:
+            mean_score += snake.score
+            if snake.score > max_score:
+                max_score = snake.score
+
+        mean_score /= len(snakes)
+
+        rand = random.randint(mean_score, max_score)
+
+        for snake in snakes:
+            if snake.score >= rand:
                 return snake
 
-        return self.snakes[0]
-
     def natural_selection(self):
-        self.kill_worst()
+        new_generation = self.select_best()
+        kids = []
 
-        for i in range(0, len(self.snakes), 2):
-            snake1 = self.snakes[i].crossover(self.snakes[i+1])
-            snake2 = self.snakes[i+1].crossover(self.snakes[i])
+        while len(new_generation) + len(kids) < self.size:
+            parent1 = self.select_snake(new_generation)
+            parent2 = self.select_snake(new_generation)
 
-            if random.randint(0, 10) == 0:
-                snake1.mutate()
-                snake2.mutate()
+            child = parent1.crossover(parent2)
 
-            self.snakes.insert(0, snake1)
-            self.snakes.insert(0, snake2)
+            child.mutate()
 
-        for idx in range(len(self.snakes)):
-            self.snakes[idx] = self.snakes[idx].clone()
+            kids.append(child)
+
+        self.snakes = new_generation + kids
 
         self.generation_id += 1
         self.done = False
         self.snake_in_game_id = 0
         print(f'New generation {self.generation_id} of snakes')
+        threading.Thread(target=self.save).start()
 
     def get_snake(self):
         return self.snakes[self.snake_in_game_id]
@@ -92,3 +109,23 @@ class Population:
 
         if done:
             self.done = True
+
+    def save(self):
+        for idx, snake in enumerate(self.snakes):
+            snake.save_to_file(self.generation_id, idx)
+
+    def load_last_generation(self):
+        self.snakes = []
+        try:
+            for idx in range(self.size):
+                snake = SmartSnake(self.game, self.canvas)
+                self.generation_id = snake.load_from_file(idx)
+                self.snakes.append(snake)
+        except FileNotFoundError:
+            answer = input('Can\'t load last population! Generate snakes randomly? [y/n]')
+
+            if answer.lower() == 'y':
+                self.snakes = []
+                self.create_snakes()
+            else:
+                raise Exception('Not full population!')

@@ -64,6 +64,8 @@ class Const:
                 Direction.SOUTH, Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST
             ]
 
+    MUTATION_RATE = .01
+
 
 class Position:
 

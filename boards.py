@@ -97,7 +97,7 @@ class StatisticBoardAI(StatisticBoard):
                          fill='white', anchor=tk.W, tag='h_score')
         self.create_text(10, 70, text=f'Generation: {self.generation_id}', font=Const.S_F,
                          fill='white', anchor=tk.W, tag='population')
-        self.create_text(10, 90, text=f'Snake: {self.snake_id}/{self.snakes_total}', font=Const.S_F,
+        self.create_text(10, 90, text=f'Snake: {self.snake_id + 1}/{self.snakes_total}', font=Const.S_F,
                          fill='white', anchor=tk.W, tag='snake')
 
     def update_population(self, population_id):
@@ -106,7 +106,7 @@ class StatisticBoardAI(StatisticBoard):
 
     def update_snake(self, snake_id):
         self.snake_id = snake_id
-        self.itemconfigure('snake', text=f'Snake: {self.snake_id}/{self.snakes_total}')
+        self.itemconfigure('snake', text=f'Snake: {self.snake_id + 1}/{self.snakes_total}')
 
     def update_info_(self, level, score, h_score, population_id, snake_id):
         super().update_info(level, score, h_score)

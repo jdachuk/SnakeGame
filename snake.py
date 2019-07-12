@@ -4,16 +4,16 @@ created: 7/10/19
 """
 
 
-import csv
+import json
 import random
 import os
 import numpy as np
-import pandas as pd
 from support import Const, Position, Direction, Move
 from game_objects import SnakeHead, SnakeTail
 
 
 class SnakeBrain:
+    VERSION = 1.0  # Change version when structure of nodes is changed
 
     @staticmethod
     def sigmoid(x):
@@ -72,21 +72,21 @@ class SnakeBrain:
     def mutate(self):
         for i in range(self.w_i.shape[0]):
             for j in range(self.w_i.shape[1]):
-                if random.randint(0, 1) == 1:
+                if random.random() < Const.MUTATION_RATE:
                     mu, sigma = 0, .4
                     mutate_factor = np.random.normal(mu, sigma) / 5
                     self.w_i[i][j] += mutate_factor
 
         for i in range(self.wh1.shape[0]):
             for j in range(self.wh1.shape[1]):
-                if random.randint(0, 1) == 1:
+                if random.random() < Const.MUTATION_RATE:
                     mu, sigma = 0, .4
                     mutate_factor = np.random.normal(mu, sigma) / 5
                     self.wh1[i][j] += mutate_factor
 
         for i in range(self.w_o.shape[0]):
             for j in range(self.w_o.shape[1]):
-                if random.randint(0, 1) == 1:
+                if random.random() < Const.MUTATION_RATE:
                     mu, sigma = 0, .4
                     mutate_factor = np.random.normal(mu, sigma) / 5
                     self.w_o[i][j] += mutate_factor
@@ -126,56 +126,44 @@ class SnakeBrain:
 
         return child
 
-    def save_to_file(self, population_id, snake_id):
-        try:
-            os.mkdir(os.curdir + '\\data')
-        except FileExistsError:
-            pass
-        with open(f'data\\brain_{population_id}_{snake_id}.csv', 'w') as csv_file:
-            headers = ['weights_input', 'weights_hidden', 'weights_output']
-            csv_writer = csv.DictWriter(csv_file, headers)
-            # csv_writer.writeheader()
-            row = {
-                'weights_input': self.w_i,
-                'weights_hidden': self.wh1,
-                'weights_output': self.w_o
+    def save_to_dict(self):
+        w_i = []
+        for i in range(self.w_i.shape[0]):
+            w_i_r = []
+            for j in range(self.w_i.shape[1]):
+                w_i_r.append(self.w_i[i][j])
+            w_i.append(w_i_r)
+
+        w_h = []
+        for i in range(self.wh1.shape[0]):
+            w_h_r = []
+            for j in range(self.wh1.shape[1]):
+                w_h_r.append(self.wh1[i][j])
+            w_h.append(w_h_r)
+
+        w_o = []
+        for i in range(self.w_o.shape[0]):
+            w_o_r = []
+            for j in range(self.w_o.shape[1]):
+                w_o_r.append(self.w_o[i][j])
+            w_o.append(w_o_r)
+        result = {
+                'version': self.VERSION,
+                'weights_input_shape': self.w_i.shape,
+                'weights_hidden_shape': self.wh1.shape,
+                'weights_output_shape': self.w_o.shape,
+                'weights_input': w_i,
+                'weights_hidden': w_h,
+                'weights_output': w_o
             }
-            csv_writer.writerow(row)
+        return result
 
-    def load_from_file(self, population_id, snake_id):
-        df = pd.read_csv(f'data\\brain_{population_id}_{snake_id}.csv', sep=',', header=None, dtype=None)
-        self.w_i = np.ndarray((0, 0))
-        self.wh1 = np.ndarray((0, 0))
-        self.w_o = np.ndarray((0, 0))
-
-        values = []
-
-        for i in range(3):
-            values.append(str(df[i].values))
-
-        for i, value in enumerate(values):
-            values[i] = value.replace('\\r\\n', '')\
-                .replace('\'', '').replace('[', '')\
-                .replace(']', '').replace('  ', ' ')
-
-        for value in values[0].split(' '):
-            try:
-                self.w_i = np.append(self.w_i, np.float(value))
-            except ValueError:
-                pass
-        for value in values[1].split(' '):
-            try:
-                self.wh1 = np.append(self.wh1, np.float(value))
-            except ValueError:
-                pass
-        for value in values[2].split(' '):
-            try:
-                self.w_o = np.append(self.w_o, np.float(value))
-            except ValueError:
-                pass
-        self.w_i = self.w_i.reshape((24, 18))
-        self.wh1 = self.wh1.reshape((18, 18))
-        self.w_o = self.w_o.reshape((18,  4))
+    def load_from_dict(self, dictionary):
+        if dictionary['version'] != self.VERSION:
+            raise ValueError('Inconsistent versions!')
+        self.w_i = np.array(dictionary['weights_input'])
+        self.wh1 = np.array(dictionary['weights_hidden'])
+        self.w_o = np.array(dictionary['weights_output'])
 
 
 class Snake:
@@ -295,12 +283,11 @@ class SmartSnake(Snake):
         super().__init__(game, canvas)
         self.brain = SnakeBrain()
         self.moves_done = 0
-        self.apples_eaten = 0
         self.score = 0
-        self.bellyful = 150
+        self.bellyful = 300
 
     def calc_score(self):
-        self.score = self.moves_done + self.apples_eaten * 20
+        self.score = self.moves_done + len(self.tail)
 
     def make_decision(self, input_data):
         output = self.brain.analyze(input_data)
@@ -336,11 +323,13 @@ class SmartSnake(Snake):
             if len(item) > 0:
                 item_tag = self.canvas.gettags(item)
                 if 'tail' in item_tag:
-                    data[0] = distance
+                    data[0] = 1 / distance
+                    break
                 elif 'apple' in item_tag:
-                    data[1] = distance
+                    data[1] = 1 / distance
+                    break
         else:
-            data[2] = distance
+            data[2] = 1 / distance
 
         return data
 
@@ -408,23 +397,30 @@ class SmartSnake(Snake):
         child.brain = self.brain.crossover(other.brain)
         return child
 
-    def save_to_file(self, population_id, snake_id):
+    def save_to_file(self, generation_id, snake_id):
+        version = self.brain.VERSION
         try:
             os.mkdir(os.curdir + '\\data')
         except FileExistsError:
             pass
-        with open(f'data\\snake_{population_id}_{snake_id}.csv', 'w') as csv_file:
-            headers = ['population', 'snake_id', 'snake_score']
-            csv_writer = csv.DictWriter(csv_file, headers)
-            csv_writer.writeheader()
-            row = {
-                'population': population_id,
+        try:
+            os.mkdir(os.curdir + f'\\data\\V_{version}')
+        except FileExistsError:
+            pass
+        with open(f'data\\V_{version}\\snake_{snake_id}.json', 'w') as json_file:
+            data = {
+                'generation_id': generation_id,
                 'snake_id': snake_id,
-                'snake_score': self.score
+                'brain': self.brain.save_to_dict()
             }
-            csv_writer.writerow(row)
+            json.dump(data, json_file)
 
-            self.brain.save_to_file(population_id, snake_id)
-
-    def load_from_file(self, population_id, snake_id):
-        self.brain.load_from_file(population_id, snake_id)
+    def load_from_file(self, snake_id):
+        version = self.brain.VERSION
+        with open(f'data\\V_{version}\\snake_{snake_id}.json', 'r') as json_file:
+            try:
+                data = json.load(json_file)
+                self.brain.load_from_dict(data['brain'])
+                return data['generation_id']
+            except json.JSONDecodeError:
+                return 0
