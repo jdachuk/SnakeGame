@@ -65,6 +65,7 @@ class Const:
             ]
 
     MUTATION_RATE = .01
+    VERSION = 1.0  # Change version when structure of neural network is changed
 
 
 class Position:

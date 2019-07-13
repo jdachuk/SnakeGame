@@ -6,6 +6,7 @@ created: 7/10/19
 import random
 import threading
 from snake import SmartSnake
+from support import Const
 
 
 class Population:
@@ -18,11 +19,17 @@ class Population:
         self.generation_id = 0
         self.done = False
 
-        chose = input('Load last generation?[y/n] ')
-        if chose.lower() == 'y':
-            self.load_last_generation()
-        else:
+        try:
+            file = open(f'data\\V_{Const.VERSION}\\snake_0.json', 'r')
+            file.close()
+        except FileNotFoundError:
             self.create_snakes()
+        finally:
+            chose = input('Found previous run of this version. Load last generation?[y/n] ')
+            if chose.lower() == 'y':
+                self.load_last_generation()
+            else:
+                self.create_snakes()
 
     def create_snakes(self):
         for _ in range(self.size):
@@ -125,7 +132,7 @@ class Population:
                 self.generation_id = snake.load_from_file(idx)
                 self.snakes.append(snake)
         except FileNotFoundError:
-            answer = input('Can\'t load last population! Generate snakes randomly? [y/n]')
+            answer = input('Can\'t load last generation! Generate snakes randomly? [y/n]')
 
             if answer.lower() == 'y':
                 self.snakes = []
