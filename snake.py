@@ -13,7 +13,7 @@ from game_objects import SnakeHead, SnakeTail
 
 
 class SnakeBrain:
-    VERSION = 1.0  # Change version when structure of nodes is changed
+    VERSION = Const.VERSION
 
     @staticmethod
     def sigmoid(x):
@@ -24,18 +24,22 @@ class SnakeBrain:
         return SnakeBrain.sigmoid(x) * (1 - SnakeBrain.sigmoid(x))
 
     def __init__(self):
-        self.w_i = 2 * np.random.random((24, 18)) - 1
-        self.wh1 = 2 * np.random.random((18, 18)) - 1
-        self.w_o = 2 * np.random.random((18,  4)) - 1
+        self.w_i = 2 * np.random.random((25, 18)) - 1
+        self.wh1 = 2 * np.random.random((19, 18)) - 1
+        self.w_o = 2 * np.random.random((19,  4)) - 1
 
         self.learning_rate = .5
 
     def analyze(self, input_data):
+        input_data = np.append(input_data, np.ones((1, 1)))  # add free neuron signal
+
         input_activation = np.dot(input_data, self.w_i)
         input_activation = self.sigmoid(input_activation)
+        input_activation = np.append(input_activation, np.ones((1, 1)))  # add free neuron signal
 
         hidden1_activation = np.dot(input_activation, self.wh1)
         hidden1_activation = self.sigmoid(hidden1_activation)
+        hidden1_activation = np.append(hidden1_activation, np.ones((1, 1)))  # add free neuron signal
 
         output_activation = np.dot(hidden1_activation, self.w_o)
         output_activation = self.sigmoid(output_activation)
@@ -43,12 +47,15 @@ class SnakeBrain:
         return output_activation
 
     def train(self, input_data, target_output):
+        input_data = np.append(input_data, np.ones((1, 1)))  # add free neuron signal
         for _ in range(1000):
             input_value = np.dot(input_data, self.w_i)
             input_activation = self.sigmoid(input_value)
+            input_activation = np.append(input_activation, np.ones((1, 1)))  # add free neuron signal
 
             hidden1_value = np.dot(input_activation, self.wh1)
             hidden1_activation = self.sigmoid(hidden1_value)
+            hidden1_activation = np.append(hidden1_activation, np.ones((1, 1)))  # add free neuron signal
 
             output_value = np.dot(hidden1_activation, self.w_o)
             output_activation = self.sigmoid(output_value)
@@ -296,9 +303,9 @@ class SmartSnake(Snake):
         output = self.brain.analyze(input_data)
 
         d_idx = 0
-        decision = output[0][d_idx]
+        decision = output[d_idx]
 
-        for idx, output in enumerate(output[0]):
+        for idx, output in enumerate(output):
             if output > decision:
                 decision = output
                 d_idx = idx
