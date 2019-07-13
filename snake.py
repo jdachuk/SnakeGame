@@ -159,7 +159,7 @@ class SnakeBrain:
         return result
 
     def load_from_dict(self, dictionary):
-        if dictionary['version'] != self.VERSION:
+        if int(dictionary['version']) != int(self.VERSION):
             raise ValueError('Inconsistent versions!')
         self.w_i = np.array(dictionary['weights_input'])
         self.wh1 = np.array(dictionary['weights_hidden'])
@@ -168,14 +168,14 @@ class SnakeBrain:
 
 class Snake:
 
-    def __init__(self, game, canvas):
+    def __init__(self, game):
         self.game = game
-        self.canvas = canvas
+        self.canvas = None
 
-        self.head = SnakeHead(canvas, Position(5, 5) * Const.SQUARE_SIZE)
+        self.head = SnakeHead(Position(5, 5) * Const.SQUARE_SIZE)
         self.tail = [
-            SnakeTail(canvas, Position(3, 5) * Const.SQUARE_SIZE),
-            SnakeTail(canvas, Position(4, 5) * Const.SQUARE_SIZE)
+            SnakeTail(Position(3, 5) * Const.SQUARE_SIZE),
+            SnakeTail(Position(4, 5) * Const.SQUARE_SIZE)
         ]
 
         self.direction = Direction.EAST
@@ -183,11 +183,17 @@ class Snake:
 
         self.alive = True
 
-    def draw(self):
-
-        self.head.draw()
+    def draw(self, canvas):
+        if self.canvas is None:
+            self.canvas = canvas
+        self.head.draw(self.canvas)
         for tail in self.tail:
-            tail.draw()
+            tail.draw(self.canvas)
+
+    def grow(self):
+        tail = SnakeTail(self.tail[-1].position)
+        tail.draw(self.canvas)
+        self.tail.append(tail)
 
     def make_turn(self):
 
@@ -220,9 +226,7 @@ class Snake:
                 self.game.update_score()
                 self.game.delete_apple(apple)
 
-                tail = SnakeTail(self.canvas, self.tail[-1].position)
-                tail.draw()
-                self.tail.append(tail)
+                self.grow()
 
                 self.game.locate_apples()
 
@@ -269,7 +273,6 @@ class SmartSnake(Snake):
 
     @staticmethod
     def get_label(direction):
-        # DIRECTION_KEYS = [RIGHT_KEY, DOWN_KEY, LEFT_KEY, UP_KEY]
         if direction == Direction.NORTH:
             return [0, 0, 0, 1]
         elif direction == Direction.SOUTH:
@@ -279,15 +282,15 @@ class SmartSnake(Snake):
         elif direction == Direction.WEST:
             return [0, 0, 1, 0]
 
-    def __init__(self, game, canvas):
-        super().__init__(game, canvas)
+    def __init__(self, game):
+        super().__init__(game)
         self.brain = SnakeBrain()
         self.moves_done = 0
         self.score = 0
         self.bellyful = 300
 
     def calc_score(self):
-        self.score = self.moves_done + len(self.tail)
+        self.score = self.moves_done**(1/2) + len(self.tail) * 3
 
     def make_decision(self, input_data):
         output = self.brain.analyze(input_data)
@@ -333,20 +336,11 @@ class SmartSnake(Snake):
 
         return data
 
-    def check_apple_collision(self, future_pos):
-
-        for apple in self.game.apples:
-
-            if apple.position == future_pos:
-                self.bellyful += 20
-                self.game.update_score()
-                self.game.delete_apple(apple)
-
-                tail = SnakeTail(self.canvas, self.tail[-1].position)
-                tail.draw()
-                self.tail.append(tail)
-
-                self.game.locate_apples()
+    def grow(self):
+        self.bellyful += 20
+        tail = SnakeTail(self.tail[-1].position)
+        tail.draw(self.canvas)
+        self.tail.append(tail)
 
     def make_turn(self):
         self.bellyful -= 1
@@ -363,6 +357,7 @@ class SmartSnake(Snake):
             data = self.look()
             decision = self.make_decision(data)
             self.change_direction(decision)
+
             for idx in range(len(self.tail)):
                 c1 = self.tail[idx].position
 
@@ -385,7 +380,7 @@ class SmartSnake(Snake):
         self.brain.train(input_data, target_output)
 
     def clone(self):
-        clone = SmartSnake(self.game, self.canvas)
+        clone = SmartSnake(self.game)
         clone.brain = self.brain.clone()
         return clone
 
@@ -393,7 +388,7 @@ class SmartSnake(Snake):
         self.brain.mutate()
 
     def crossover(self, other):
-        child = SmartSnake(self.game, self.canvas)
+        child = SmartSnake(self.game)
         child.brain = self.brain.crossover(other.brain)
         return child
 

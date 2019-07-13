@@ -26,7 +26,7 @@ class Population:
 
     def create_snakes(self):
         for _ in range(self.size):
-            snake = SmartSnake(self.game, self.canvas)
+            snake = SmartSnake(self.game)
             self.snakes.append(snake)
 
     def train_snakes(self, input_data, target_output):
@@ -44,11 +44,13 @@ class Population:
             mean_score += snake.score
         mean_score /= len(self.snakes)
         result = []
-        for snake in self.snakes:
+        self.sort_snakes_by_score()
+        for snake in reversed(self.snakes):
             if snake.score >= mean_score:
                 result.append(snake.clone())
             if len(result) >= n:
                 break
+        random.shuffle(result)
         return result
 
     @staticmethod
@@ -113,12 +115,13 @@ class Population:
     def save(self):
         for idx, snake in enumerate(self.snakes):
             snake.save_to_file(self.generation_id, idx)
+        print(f'Generation {self.generation_id} successfully saved!')
 
     def load_last_generation(self):
         self.snakes = []
         try:
             for idx in range(self.size):
-                snake = SmartSnake(self.game, self.canvas)
+                snake = SmartSnake(self.game)
                 self.generation_id = snake.load_from_file(idx)
                 self.snakes.append(snake)
         except FileNotFoundError:

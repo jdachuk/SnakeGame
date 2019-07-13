@@ -15,9 +15,6 @@ class GameBoard(tk.Canvas):
         super().__init__(width=Const.G_B_W, height=Const.G_B_H,
                          background=Const.G_B_BG)
 
-    def check_apple_in_pos(self, position):
-        return 'apple' in self.gettags(self.find_in_position(position))
-
     def find_in_position(self, position):
         return self.find_overlapping(position.x, position.y, position.x, position.y)
 

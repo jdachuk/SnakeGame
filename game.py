@@ -36,7 +36,7 @@ class SnakeGame(tk.Frame):
         self.high_score = 0
 
         self.apples = []
-        self.snake = Snake(self, self.board)
+        self.snake = Snake(self)
 
         self.paused = False
         self.in_game = True
@@ -47,7 +47,7 @@ class SnakeGame(tk.Frame):
 
     def init_game(self):
         """Initialize game objects and starts game"""
-        self.snake.draw()
+        self.snake.draw(self.board)
         self.locate_apples()
         self.statistic_board = StatisticBoard()
         self.statistic_board.grid(column=0, row=0)
@@ -59,7 +59,8 @@ class SnakeGame(tk.Frame):
     def locate_apples(self):
         """Locating an apple"""
         while len(self.apples) < self.level:
-            apple = Apple(self.board)
+            apple = Apple()
+            apple.draw(self.board)
             self.apples.append(apple)
 
     def on_timer(self):
@@ -98,7 +99,7 @@ class SnakeGame(tk.Frame):
         self.score = 0
         self.in_game = True
 
-        self.snake = Snake(self, self.board)
+        self.snake = Snake(self)
         self.apples = []
 
         self.init_game()
@@ -175,7 +176,7 @@ class SnakeGameAI(SnakeGame):
 
     def init_game(self):
         """Initialize game objects and starts game"""
-        self.snake.draw()
+        self.snake.draw(self.board)
         self.locate_apples()
         self.statistic_board = StatisticBoardAI(self.population.size)
         self.statistic_board.grid(column=0, row=0)
