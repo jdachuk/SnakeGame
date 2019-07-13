@@ -1,6 +1,7 @@
 """
 author: edacjos
 created: 7/10/19
+last modified: 07/13/2019
 """
 
 
@@ -24,86 +25,50 @@ class SnakeBrain:
         return SnakeBrain.sigmoid(x) * (1 - SnakeBrain.sigmoid(x))
 
     def __init__(self):
-        self.w_i = 2 * np.random.random((25, 18)) - 1
-        self.wh1 = 2 * np.random.random((19, 18)) - 1
-        self.w_o = 2 * np.random.random((19,  4)) - 1
-
-        self.learning_rate = .5
+        self.w_i = 10 * np.random.random((25, 18)) - 5
+        self.w_h = 10 * np.random.random((19, 18)) - 5
+        self.w_o = 10 * np.random.random((19,  4)) - 5
 
     def analyze(self, input_data):
-        input_data = np.append(input_data, np.ones((1, 1)))  # add free neuron signal
+        input_data = np.append(input_data, np.ones((1, 1)))  # add bias
 
         input_activation = np.dot(input_data, self.w_i)
         input_activation = self.sigmoid(input_activation)
-        input_activation = np.append(input_activation, np.ones((1, 1)))  # add free neuron signal
+        input_activation = np.append(input_activation, np.ones((1, 1)))  # add bias
 
-        hidden1_activation = np.dot(input_activation, self.wh1)
-        hidden1_activation = self.sigmoid(hidden1_activation)
-        hidden1_activation = np.append(hidden1_activation, np.ones((1, 1)))  # add free neuron signal
+        hidden_activation = np.dot(input_activation, self.w_h)
+        hidden_activation = self.sigmoid(hidden_activation)
+        hidden_activation = np.append(hidden_activation, np.ones((1, 1)))  # add bias
 
-        output_activation = np.dot(hidden1_activation, self.w_o)
+        output_activation = np.dot(hidden_activation, self.w_o)
         output_activation = self.sigmoid(output_activation)
 
         return output_activation
-
-    def train(self, input_data, target_output):
-        input_data = np.append(input_data, np.ones((1, 1)))  # add free neuron signal
-        for _ in range(1000):
-            input_value = np.dot(input_data, self.w_i)
-            input_activation = self.sigmoid(input_value)
-            input_activation = np.append(input_activation, np.ones((1, 1)))  # add free neuron signal
-
-            hidden1_value = np.dot(input_activation, self.wh1)
-            hidden1_activation = self.sigmoid(hidden1_value)
-            hidden1_activation = np.append(hidden1_activation, np.ones((1, 1)))  # add free neuron signal
-
-            output_value = np.dot(hidden1_activation, self.w_o)
-            output_activation = self.sigmoid(output_value)
-
-            mse = ((target_output - output_activation)**2).mean(axis=None)
-            print(mse)
-
-            output_errors = (output_activation - target_output) * self.sigmoid_der(output_value)
-            delta_w_o = np.dot(hidden1_activation.T, output_errors) * self.learning_rate
-
-            hidden1_errors = np.dot(output_errors, self.w_o.T) * self.sigmoid_der(hidden1_value)
-            delta_wh1 = np.dot(input_activation.T, hidden1_errors) * self.learning_rate
-
-            input_errors = np.dot(hidden1_errors, self.wh1.T) * self.sigmoid_der(input_value)
-            delta_w_i = np.dot(input_data.T, input_errors) * self.learning_rate
-
-            self.w_o -= delta_w_o
-            self.wh1 -= delta_wh1
-            self.w_i -= delta_w_i
 
     def mutate(self):
         for i in range(self.w_i.shape[0]):
             for j in range(self.w_i.shape[1]):
                 if random.random() < Const.MUTATION_RATE:
-                    mu, sigma = 0, .4
-                    mutate_factor = np.random.normal(mu, sigma) / 5
+                    mutate_factor = np.random.normal(Const.MU, Const.SIGMA)
                     self.w_i[i][j] += mutate_factor
 
-        for i in range(self.wh1.shape[0]):
-            for j in range(self.wh1.shape[1]):
+        for i in range(self.w_h.shape[0]):
+            for j in range(self.w_h.shape[1]):
                 if random.random() < Const.MUTATION_RATE:
-                    mu, sigma = 0, .4
-                    mutate_factor = np.random.normal(mu, sigma) / 5
-                    self.wh1[i][j] += mutate_factor
+                    mutate_factor = np.random.normal(Const.MU, Const.SIGMA)
+                    self.w_h[i][j] += mutate_factor
 
         for i in range(self.w_o.shape[0]):
             for j in range(self.w_o.shape[1]):
                 if random.random() < Const.MUTATION_RATE:
-                    mu, sigma = 0, .4
-                    mutate_factor = np.random.normal(mu, sigma) / 5
+                    mutate_factor = np.random.normal(Const.MU, Const.SIGMA)
                     self.w_o[i][j] += mutate_factor
 
     def clone(self):
         clone = SnakeBrain()
         clone.w_i = self.w_i
-        clone.wh1 = self.wh1
+        clone.w_h = self.w_h
         clone.w_o = self.w_o
-        clone.learning_rate = self.learning_rate
 
         return clone
 
@@ -117,12 +82,12 @@ class SnakeBrain:
                 if i < rand_col and j < rand_row:
                     child.w_i[i][j] = other.w_i[i][j]
 
-        rand_col = random.randint(0, child.wh1.shape[0])
-        rand_row = random.randint(0, child.wh1.shape[1])
-        for i in range(child.wh1.shape[0]):
-            for j in range(child.wh1.shape[1]):
+        rand_col = random.randint(0, child.w_h.shape[0])
+        rand_row = random.randint(0, child.w_h.shape[1])
+        for i in range(child.w_h.shape[0]):
+            for j in range(child.w_h.shape[1]):
                 if i < rand_col and j < rand_row:
-                    child.wh1[i][j] = other.wh1[i][j]
+                    child.w_h[i][j] = other.w_h[i][j]
 
         rand_col = random.randint(0, child.w_o.shape[0])
         rand_row = random.randint(0, child.w_o.shape[1])
@@ -142,10 +107,10 @@ class SnakeBrain:
             w_i.append(w_i_r)
 
         w_h = []
-        for i in range(self.wh1.shape[0]):
+        for i in range(self.w_h.shape[0]):
             w_h_r = []
-            for j in range(self.wh1.shape[1]):
-                w_h_r.append(self.wh1[i][j])
+            for j in range(self.w_h.shape[1]):
+                w_h_r.append(self.w_h[i][j])
             w_h.append(w_h_r)
 
         w_o = []
@@ -157,7 +122,7 @@ class SnakeBrain:
         result = {
                 'version': self.VERSION,
                 'weights_input_shape': self.w_i.shape,
-                'weights_hidden_shape': self.wh1.shape,
+                'weights_hidden_shape': self.w_h.shape,
                 'weights_output_shape': self.w_o.shape,
                 'weights_input': w_i,
                 'weights_hidden': w_h,
@@ -169,7 +134,7 @@ class SnakeBrain:
         if int(dictionary['version']) != int(self.VERSION):
             raise ValueError('Inconsistent versions!')
         self.w_i = np.array(dictionary['weights_input'])
-        self.wh1 = np.array(dictionary['weights_hidden'])
+        self.w_h = np.array(dictionary['weights_hidden'])
         self.w_o = np.array(dictionary['weights_output'])
 
 
@@ -278,17 +243,6 @@ class Snake:
 
 class SmartSnake(Snake):
 
-    @staticmethod
-    def get_label(direction):
-        if direction == Direction.NORTH:
-            return [0, 0, 0, 1]
-        elif direction == Direction.SOUTH:
-            return [0, 1, 0, 0]
-        elif direction == Direction.EAST:
-            return [1, 0, 0, 0]
-        elif direction == Direction.WEST:
-            return [0, 0, 1, 0]
-
     def __init__(self, game):
         super().__init__(game)
         self.brain = SnakeBrain()
@@ -297,7 +251,7 @@ class SmartSnake(Snake):
         self.bellyful = 300
 
     def calc_score(self):
-        self.score = self.moves_done**(1/2) + len(self.tail) * 3
+        self.score = self.moves_done
 
     def make_decision(self, input_data):
         output = self.brain.analyze(input_data)
@@ -329,7 +283,7 @@ class SmartSnake(Snake):
         while 0 < position.x < Const.G_B_W and 0 < position.y < Const.G_B_H:
             position = position + Move(Const.SQUARE_SIZE, Const.SQUARE_SIZE) * direction
             distance += 1
-            item = self.canvas.find_in_position(position + Position(10, 10))
+            item = self.canvas.find_in_position(position + 10)
             if len(item) > 0:
                 item_tag = self.canvas.gettags(item)
                 if 'tail' in item_tag:
@@ -382,9 +336,6 @@ class SmartSnake(Snake):
             self.check_apple_collision(future_pos)
 
         self.calc_score()
-
-    def train(self, input_data, target_output):
-        self.brain.train(input_data, target_output)
 
     def clone(self):
         clone = SmartSnake(self.game)

@@ -1,6 +1,7 @@
 """
 author: edacjos
 created: 7/10/19
+last modified: 07/13/2019
 """
 
 
@@ -33,7 +34,7 @@ class Const:
     """Constants for Snake Game"""
     SPEED_INCREASE = 50
     DELAY = 300
-    MIN_DELAY = 64
+    MIN_DELAY = 100
     SQUARE_SIZE = 20
     NUM_OF_SQUARES = 30
 
@@ -65,7 +66,8 @@ class Const:
             ]
 
     MUTATION_RATE = .01
-    VERSION = 1.0  # Change version when structure of neural network is changed
+    MU, SIGMA = 0., 1.
+    VERSION = 1.1  # Change version when structure of neural network is changed
 
 
 class Position:
@@ -83,6 +85,8 @@ class Position:
             return Position(self.x + other.x, self.y + other.y)
         elif isinstance(other, Move):
             return Position(self.x + other.move_x, self.y + other.move_y)
+        elif isinstance(other, int):
+            return Position(self.x + other, self.y + other)
 
     def __mul__(self, other):
         if isinstance(other, int):

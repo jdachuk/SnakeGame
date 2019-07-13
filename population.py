@@ -1,6 +1,7 @@
 """
 author: edacjos
 created: 7/10/19
+last modified: 07/13/2019
 """
 
 import random
@@ -10,81 +11,74 @@ from support import Const
 
 
 class Population:
-    def __init__(self, game, canvas):
+    def __init__(self, game):
         self.snakes = []
+        self.top_snake = None
         self.game = game
-        self.canvas = canvas
         self.size = 1000
         self.snake_in_game_id = 0
         self.generation_id = 0
         self.done = False
 
         try:
-            file = open(f'data\\V_{Const.VERSION}\\snake_0.json', 'r')
-            file.close()
+            with open(f'data\\V_{Const.VERSION}\\snake_0.json', 'r'):
+                chose = input('Found previous run of this version. Load last generation?[y/n] ')
+                if chose.lower() == 'y':
+                    self.load_last_generation()
+                else:
+                    self.create_snakes()
         except FileNotFoundError:
             self.create_snakes()
-        finally:
-            chose = input('Found previous run of this version. Load last generation?[y/n] ')
-            if chose.lower() == 'y':
-                self.load_last_generation()
-            else:
-                self.create_snakes()
 
     def create_snakes(self):
         for _ in range(self.size):
             snake = SmartSnake(self.game)
             self.snakes.append(snake)
 
-    def train_snakes(self, input_data, target_output):
-        for snake in self.snakes:
-            snake.train(input_data, target_output)
-
-    def sort_snakes_by_score(self):
-        self.snakes.sort(key=lambda snake: snake.score)
+    @staticmethod
+    def sort_by_score(snakes):
+        result = snakes
+        result.sort(key=lambda snake: snake.score)
+        return result
 
     def select_best(self, n=None):
         if n is None:
             n = len(self.snakes) // 2
-        mean_score = 0
-        for snake in self.snakes:
-            mean_score += snake.score
-        mean_score /= len(self.snakes)
-        result = []
-        self.sort_snakes_by_score()
-        for snake in reversed(self.snakes):
-            if snake.score >= mean_score:
-                result.append(snake.clone())
-            if len(result) >= n:
-                break
-        random.shuffle(result)
-        return result
+
+        snakes = self.sort_by_score(self.snakes)
+
+        return snakes[len(snakes) - n:]
 
     @staticmethod
     def select_snake(snakes):
-        max_score = 0
-        mean_score = 0
+        rand_idx = random.randint(0, len(snakes) - 1)
+        return snakes[rand_idx]
 
-        for snake in snakes:
-            mean_score += snake.score
-            if snake.score > max_score:
-                max_score = snake.score
-
-        mean_score /= len(snakes)
-
-        rand = random.randint(mean_score, max_score)
-
-        for snake in snakes:
-            if snake.score >= rand:
-                return snake
+    def select_top_snake(self):
+        score = 0
+        for snake in self.snakes:
+            if snake.score > score:
+                score = snake.score
+                self.top_snake = snake
 
     def natural_selection(self):
-        new_generation = self.select_best()
+        self.select_top_snake()
+        top_snakes = self.select_best()
+
+        for idx in range(len(top_snakes)):
+            top_snakes[idx] = top_snakes[idx].clone()
+
         kids = []
 
-        while len(new_generation) + len(kids) < self.size:
-            parent1 = self.select_snake(new_generation)
-            parent2 = self.select_snake(new_generation)
+        rand_snake = self.select_snake(top_snakes)
+        child_top = self.top_snake.crossover(rand_snake)
+        child_top.mutate()
+
+        kids.append(child_top)
+
+        while len(top_snakes) + len(kids) < self.size:
+            parent1 = self.select_snake(top_snakes)
+            parent2 = self.select_snake(top_snakes)
 
             child = parent1.crossover(parent2)
 
@@ -92,7 +86,7 @@ class Population:
 
             kids.append(child)
 
-        self.snakes = new_generation + kids
+        self.snakes = top_snakes + kids
 
         self.generation_id += 1
         self.done = False
