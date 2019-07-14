@@ -169,7 +169,7 @@ class SnakeGameAI(SnakeGame):
         super().__init__()
         self.population = Population(self)
 
-        self.delay = Const.MIN_DELAY
+        self.delay = Const.AI_DELAY
         self.statistic_board = StatisticBoardAI(self.population.size)
         self.statistic_board.grid(column=0, row=0)
         self.board.grid(column=1, row=0)
@@ -189,6 +189,8 @@ class SnakeGameAI(SnakeGame):
     def on_timer(self):
         """On timer tick function"""
         if not self.paused and self.in_game:
+            self.after_cancel(self.after_id)
+
             self.snake.make_turn()
             self.check_level_up()
 
@@ -210,10 +212,12 @@ class SnakeGameAI(SnakeGame):
             self.slow_down()
 
     def speed_up(self):
-        self.delay = self.delay // 2
+        if self.delay // 2 >= Const.MIN_AI_DELAY:
+            self.delay = self.delay // 2
 
     def slow_down(self):
-        self.delay = self.delay * 2
+        if self.delay * 2 <= Const.MAX_AI_DELAY:
+            self.delay = self.delay * 2
 
     def replay(self):
         """Replay"""

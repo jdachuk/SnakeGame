@@ -4,8 +4,11 @@ created: 7/10/19
 last modified: 07/13/2019
 """
 
+import os
 import random
 import threading
+import json
+import csv
 from snake import SmartSnake
 from support import Const
 
@@ -15,10 +18,11 @@ class Population:
         self.snakes = []
         self.top_snake = None
         self.game = game
-        self.size = 1000
+        self.size = Const.POPULATION_SIZE
         self.snake_in_game_id = 0
         self.generation_id = 0
         self.done = False
+        self.total_fitness = 0
 
         try:
             with open(f'data\\V_{Const.VERSION}\\snake_0.json', 'r'):
@@ -35,58 +39,44 @@ class Population:
             snake = SmartSnake(self.game)
             self.snakes.append(snake)
 
-    @staticmethod
-    def sort_by_score(snakes):
-        result = snakes
-        result.sort(key=lambda snake: snake.score)
-        return result
+    def select_snake(self):
+        rand = self.total_fitness * random.random()
 
-    def select_best(self, n=None):
-        if n is None:
-            n = len(self.snakes) // 2
-
-        snakes = self.sort_by_score(self.snakes)
-
-        return snakes[len(snakes) - n:]
-
-    @staticmethod
-    def select_snake(snakes):
-        rand_idx = random.randint(0, len(snakes) - 1)
-        return snakes[rand_idx]
+        cum_sum = 0
+        for snake in self.snakes:
+            cum_sum += snake.fitness
+            if cum_sum >= rand:
+                return snake
 
     def select_top_snake(self):
-        score = 0
+        max_fitness = 0
         for snake in self.snakes:
-            if snake.score > score:
-                score = snake.score
+            if snake.fitness > max_fitness:
+                max_fitness = snake.fitness
                 self.top_snake = snake
+        threading.Thread(target=self.save_top_snake).start()
+
+    def calculate_total_fitness(self):
+        total = 0
+        for snake in self.snakes:
+            total += snake.fitness
+        self.total_fitness = total
 
     def natural_selection(self):
+        self.calculate_total_fitness()
         self.select_top_snake()
-        top_snakes = self.select_best()
+        new_generation = [self.top_snake.clone()]
 
-        for idx in range(len(top_snakes)):
-            top_snakes[idx] = top_snakes[idx].clone()
-
-        kids = []
-
-        rand_snake = self.select_snake(top_snakes)
-        child_top = self.top_snake.crossover(rand_snake)
-        child_top.mutate()
-
-        kids.append(child_top)
-
-        while len(top_snakes) + len(kids) < self.size:
-            parent1 = self.select_snake(top_snakes)
-            parent2 = self.select_snake(top_snakes)
+        while len(new_generation) < self.size:
+            parent1 = self.select_snake()
+            parent2 = self.select_snake()
 
             child = parent1.crossover(parent2)
-
             child.mutate()
 
-            kids.append(child)
+            new_generation.append(child)
 
-        self.snakes = top_snakes + kids
+        self.snakes = new_generation
 
         self.generation_id += 1
         self.done = False
@@ -133,3 +123,41 @@ class Population:
                 self.create_snakes()
             else:
                 raise Exception('Not full population!')
+
+    def save_top_snake(self):
+        try:
+            os.mkdir(os.curdir + '\\data')
+        except FileExistsError:
+            pass
+        try:
+            os.mkdir(os.curdir + f'\\data\\V_{Const.VERSION}')
+        except FileExistsError:
+            pass
+        try:
+            os.mkdir(os.curdir + f'\\data\\V_{Const.VERSION}\\top_snakes')
+        except FileExistsError:
+            pass
+        try:
+            os.mkdir(os.curdir + f'\\data\\V_{Const.VERSION}\\info')
+        except FileExistsError:
+            pass
+        with open(f'data\\V_{Const.VERSION}\\top_snakes\\gen_{self.generation_id}.json', 'w') as json_file:
+            data = {
+                'generation_id': self.generation_id,
+                'generation_size': self.size,
+                'total_fitness': self.total_fitness,
+                'generation_avg_fitness': self.total_fitness / self.size,
+                'snake_fitness': self.top_snake.fitness,
+                'snake_brain': self.top_snake.brain.save_to_dict()
+            }
+            json.dump(data, json_file)
+        with open(f'data\\V_{Const.VERSION}\\info\\progress.csv', 'a') as csv_file:
+            fieldnames = ['generation_id', 'generation_size', 'total_fitness', 'top_fitness']
+            csv_writer = csv.DictWriter(csv_file, fieldnames)
+            new_data = {
+                'generation_id': self.generation_id,
+                'generation_size': self.size,
+                'total_fitness': self.total_fitness,
+                'top_fitness': self.top_snake.fitness
+            }
+            csv_writer.writerow(new_data)

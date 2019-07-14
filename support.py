@@ -34,7 +34,10 @@ class Const:
     """Constants for Snake Game"""
     SPEED_INCREASE = 50
     DELAY = 300
-    MIN_DELAY = 100
+    MIN_DELAY = 50
+    AI_DELAY = 64
+    MIN_AI_DELAY = 1
+    MAX_AI_DELAY = 256
     SQUARE_SIZE = 20
     NUM_OF_SQUARES = 30
 
@@ -44,6 +47,9 @@ class Const:
     G_B_W = NUM_OF_SQUARES * SQUARE_SIZE  # Game Board width
     G_B_H = NUM_OF_SQUARES * SQUARE_SIZE  # Game Board height
     G_B_BG = '#5B5B5B'  # Game Board background color
+
+    P_B_W = NUM_OF_SQUARES * SQUARE_SIZE
+    P_B_H = NUM_OF_SQUARES * SQUARE_SIZE
 
     MIN_RAND_POS = 0
     MAX_RAND_POS = G_B_W // SQUARE_SIZE - 1
@@ -65,7 +71,8 @@ class Const:
                 Direction.SOUTH, Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST
             ]
 
-    MUTATION_RATE = .01
+    POPULATION_SIZE = 1000
+    MUTATION_RATE = .05
     MU, SIGMA = 0., 1.
     VERSION = 1.1  # Change version when structure of neural network is changed
 
@@ -98,3 +105,6 @@ class Position:
         if not isinstance(other, Position):
             return False
         return self.x == other.x and self.y == other.y
+
+    def __str__(self):
+        return f'({self.x}, {self.y})'
