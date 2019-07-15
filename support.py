@@ -38,7 +38,7 @@ class Const:
     AI_DELAY = 64
     MIN_AI_DELAY = 1
     MAX_AI_DELAY = 256
-    SQUARE_SIZE = 20
+    SQUARE_SIZE = 15
     NUM_OF_SQUARES = 30
 
     G_F_S = 20  # Game Board font size
@@ -71,10 +71,11 @@ class Const:
                 Direction.SOUTH, Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST
             ]
 
-    POPULATION_SIZE = 1000
+    POPULATION_SIZE = 2000
     MUTATION_RATE = .05
+    CROSSOVER_RATE = 0.95
     MU, SIGMA = 0., 1.
-    VERSION = 1.1  # Change version when structure of neural network is changed
+    VERSION = 1.12  # Change version when structure of neural network is changed
 
 
 class Position:

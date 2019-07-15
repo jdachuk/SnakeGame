@@ -89,11 +89,12 @@ class SnakeBrain:
 
             return child_w
 
-        child = self.clone()
+        child = SnakeBrain()
 
-        child.w_i = weights_crossover(self.w_i, other.w_i)
-        child.w_h = weights_crossover(self.w_h, other.w_h)
-        child.w_o = weights_crossover(self.w_o, other.w_o)
+        if random.random() <= Const.CROSSOVER_RATE:
+            child.w_i = weights_crossover(self.w_i, other.w_i)
+            child.w_h = weights_crossover(self.w_h, other.w_h)
+            child.w_o = weights_crossover(self.w_o, other.w_o)
 
         return child
 
@@ -132,13 +133,12 @@ class Snake:
         self.game = game
         self.canvas = None
 
-        self.head = SnakeHead(Position(5, 5) * Const.SQUARE_SIZE)
+        self.head = SnakeHead(Position(15, 15) * Const.SQUARE_SIZE)
         self.tail = [
-            SnakeTail(Position(3, 5) * Const.SQUARE_SIZE),
-            SnakeTail(Position(4, 5) * Const.SQUARE_SIZE)
+            SnakeTail(Position(16, 16) * Const.SQUARE_SIZE),
+            SnakeTail(Position(16, 15) * Const.SQUARE_SIZE)
         ]
-
-        self.direction = Direction.EAST
+        self.direction = Direction.WEST
         self.move = self.direction * Const.SQUARE_SIZE
 
         self.alive = True
@@ -149,6 +149,13 @@ class Snake:
         self.head.draw(self.canvas)
         for tail in self.tail:
             tail.draw(self.canvas)
+
+    def die(self):
+        self.alive = False
+        self.head.delete()
+        for tail in self.tail:
+            tail.delete()
+        self.game.game_over()
 
     def grow(self):
         tail = SnakeTail(self.tail[-1].position)
@@ -194,13 +201,11 @@ class Snake:
         """Check collisions with snake tail or borders"""
         for tail in self.tail:
             if tail.position == self.head.position:
-                self.alive = False
-                self.game.game_over()
+                self.die()
 
         if future_pos.x < 0 or future_pos.x > Const.G_B_W - Const.SQUARE_SIZE or \
                 future_pos.y < 0 or future_pos.y > Const.G_B_H - Const.SQUARE_SIZE:
-            self.alive = False
-            self.game.game_over()
+            self.die()
 
     def change_direction(self, new_direction):
         if new_direction == 'Left' and self.move_x == 0:
@@ -233,13 +238,6 @@ class SmartSnake(Snake):
 
     def __init__(self, game):
         super().__init__(game)
-        self.head = SnakeHead(Position(15, 15) * Const.SQUARE_SIZE)
-        self.tail = [
-            SnakeTail(Position(16, 16) * Const.SQUARE_SIZE),
-            SnakeTail(Position(16, 15) * Const.SQUARE_SIZE)
-        ]
-        self.direction = Direction.WEST
-        self.move = self.direction * Const.SQUARE_SIZE
         self.brain = SnakeBrain()
         self.moves_done = 0
         self.fitness = 0
@@ -273,9 +271,10 @@ class SmartSnake(Snake):
         data = np.zeros((3, 1))
         position = Position(self.head_x, self.head_y)
 
-        distance = 1
+        distance = 0
 
         while 0 < position.x < Const.G_B_W and 0 < position.y < Const.G_B_H:
+            distance += 1
             position = position + Move(Const.SQUARE_SIZE, Const.SQUARE_SIZE) * direction
             item = self.canvas.find_in_position(position + 10)
             if len(item) > 0:
@@ -286,14 +285,12 @@ class SmartSnake(Snake):
                 elif 'apple' in item_tag:
                     data[1] = 1 / distance
                     break
-            distance += 1
         else:
             data[2] = 1 / distance
 
         return data
 
     def grow(self):
-        self.bellyful += 20
         tail = SnakeTail(self.tail[-1].position)
         tail.draw(self.canvas)
         self.tail.append(tail)
@@ -301,8 +298,7 @@ class SmartSnake(Snake):
     def make_turn(self):
         self.bellyful -= 1
         if self.bellyful <= 0:
-            self.alive = False
-            self.game.game_over()
+            self.die()
 
         future_pos = Position(self.head_x, self.head_y) + self.direction * Const.SQUARE_SIZE
 

@@ -167,6 +167,7 @@ class SnakeGameAI(SnakeGame):
 
     def __init__(self):
         super().__init__()
+        self.level_system = False
         self.population = Population(self)
 
         self.delay = Const.AI_DELAY

@@ -32,6 +32,7 @@ class GameObject:
     def delete(self):
         if self.id != -1:
             self.canvas.delete(self.id)
+            self.image = None
             self.id = -1
 
 
@@ -39,14 +40,20 @@ class SnakeHead(GameObject):
 
     def __init__(self, position):
         super().__init__('head', position)
+
+    def draw(self, canvas):
         self.image = ImageTk.PhotoImage(Image.open('images/head.png'))
+        super().draw(canvas)
 
 
 class SnakeTail(GameObject):
 
     def __init__(self, position):
         super().__init__('tail', position)
+
+    def draw(self, canvas):
         self.image = ImageTk.PhotoImage(Image.open('images/tail.png'))
+        super().draw(canvas)
 
 
 class Food(GameObject):
