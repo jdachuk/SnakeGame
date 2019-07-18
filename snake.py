@@ -152,9 +152,6 @@ class Snake:
 
     def die(self):
         self.alive = False
-        self.head.delete()
-        for tail in self.tail:
-            tail.delete()
         self.game.game_over()
 
     def grow(self):
@@ -163,10 +160,7 @@ class Snake:
         self.tail.append(tail)
 
     def make_turn(self):
-
-        future_pos = Position(self.head_x, self.head_y) + self.direction * Const.SQUARE_SIZE
-
-        self.check_collisions(future_pos)
+        self.check_collisions()
 
         if self.alive:
             for idx in range(len(self.tail)):
@@ -183,13 +177,12 @@ class Snake:
             self.move = self.direction * Const.SQUARE_SIZE
             self.head.move(self.move)
 
-        self.check_apple_collision(future_pos)
+        self.check_apple_collision()
 
-    def check_apple_collision(self, future_pos):
+    def check_apple_collision(self):
 
         for apple in self.game.apples:
-
-            if apple.position == future_pos:
+            if apple.position == self.head.position:
                 self.game.update_score()
                 self.game.delete_apple(apple)
 
@@ -197,14 +190,17 @@ class Snake:
 
                 self.game.locate_apples()
 
-    def check_collisions(self, future_pos):
+    def check_collisions(self):
         """Check collisions with snake tail or borders"""
         for tail in self.tail:
             if tail.position == self.head.position:
                 self.die()
 
-        if future_pos.x < 0 or future_pos.x > Const.G_B_W - Const.SQUARE_SIZE or \
-                future_pos.y < 0 or future_pos.y > Const.G_B_H - Const.SQUARE_SIZE:
+        future_pos = Position(self.head_x + self.direction.move_x * Const.SQUARE_SIZE,
+                              self.head_y + self.direction.move_y * Const.SQUARE_SIZE)
+
+        if future_pos.x < 0 or future_pos.x > Const.G_B_W or \
+                future_pos.y < 0 or future_pos.y > Const.G_B_H:
             self.die()
 
     def change_direction(self, new_direction):
@@ -241,7 +237,7 @@ class SmartSnake(Snake):
         self.brain = SnakeBrain()
         self.moves_done = 0
         self.fitness = 0
-        self.bellyful = 300
+        self.left_to_live = 150
 
     def calc_score(self):
         self.fitness = int(self.moves_done**2 * pow(2, len(self.tail)))
@@ -252,9 +248,9 @@ class SmartSnake(Snake):
         d_idx = 0
         decision = output[d_idx]
 
-        for idx, output in enumerate(output):
-            if output > decision:
-                decision = output
+        for idx, out in enumerate(output):
+            if out > decision:
+                decision = out
                 d_idx = idx
 
         return Const.DIRECTION_KEYS[d_idx]
@@ -276,13 +272,13 @@ class SmartSnake(Snake):
         while 0 < position.x < Const.G_B_W and 0 < position.y < Const.G_B_H:
             distance += 1
             position = position + Move(Const.SQUARE_SIZE, Const.SQUARE_SIZE) * direction
-            item = self.canvas.find_in_position(position + 10)
+            item = self.canvas.find_in_position(position + Const.SQUARE_SIZE // 2)
             if len(item) > 0:
                 item_tag = self.canvas.gettags(item)
-                if 'tail' in item_tag:
+                if 'apple' in item_tag:
                     data[0] = 1 / distance
                     break
-                elif 'apple' in item_tag:
+                elif 'tail' in item_tag:
                     data[1] = 1 / distance
                     break
         else:
@@ -291,18 +287,17 @@ class SmartSnake(Snake):
         return data
 
     def grow(self):
+        self.left_to_live += 60
         tail = SnakeTail(self.tail[-1].position)
         tail.draw(self.canvas)
         self.tail.append(tail)
 
     def make_turn(self):
-        self.bellyful -= 1
-        if self.bellyful <= 0:
+        self.left_to_live -= 1
+        if self.left_to_live < 0:
             self.die()
 
-        future_pos = Position(self.head_x, self.head_y) + self.direction * Const.SQUARE_SIZE
-
-        self.check_collisions(future_pos)
+        self.check_collisions()
 
         if self.alive:
             self.moves_done += 1
@@ -324,7 +319,7 @@ class SmartSnake(Snake):
             self.move = self.direction * Const.SQUARE_SIZE
             self.head.move(self.move)
 
-            self.check_apple_collision(future_pos)
+            self.check_apple_collision()
 
         self.calc_score()
 

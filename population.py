@@ -21,7 +21,6 @@ class Population:
         self.size = Const.POPULATION_SIZE
         self.snake_in_game_id = 0
         self.generation_id = 0
-        self.done = False
         self.total_fitness = 0
 
         try:
@@ -79,7 +78,6 @@ class Population:
         self.snakes = new_generation
 
         self.generation_id += 1
-        self.done = False
         self.snake_in_game_id = 0
         print(f'New generation {self.generation_id} of snakes')
         threading.Thread(target=self.save).start()
@@ -88,20 +86,15 @@ class Population:
         return self.snakes[self.snake_in_game_id]
 
     def next_snake(self):
-        self.is_done()
-        if self.done:
-            self.natural_selection()
-        else:
-            self.snake_in_game_id += 1
-        return self.get_snake()
-
-    def is_done(self):
         done = True
         for snake in self.snakes:
             done = done and not snake.alive
 
         if done:
-            self.done = True
+            self.natural_selection()
+        else:
+            self.snake_in_game_id += 1
+        return self.get_snake()
 
     def save(self):
         for idx, snake in enumerate(self.snakes):

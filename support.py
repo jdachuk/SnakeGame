@@ -17,6 +17,9 @@ class Move:
         elif isinstance(other, Move):
             return Move(self.move_x * other.move_x, self.move_y * other.move_y)
 
+    def __str__(self):
+        return f'{self.move_x, self.move_y}'
+
 
 class Direction(Move):
     NORTH = Move(0, -1)
@@ -72,10 +75,10 @@ class Const:
             ]
 
     POPULATION_SIZE = 2000
-    MUTATION_RATE = .05
-    CROSSOVER_RATE = 0.95
+    MUTATION_RATE = .01
+    CROSSOVER_RATE = 0.99
     MU, SIGMA = 0., 1.
-    VERSION = 1.12  # Change version when structure of neural network is changed
+    VERSION = 1.1  # Change version when structure of neural network is changed
 
 
 class Position:
@@ -103,8 +106,6 @@ class Position:
             return Position(self.x * other.x, self.y * other.y)
 
     def __eq__(self, other):
-        if not isinstance(other, Position):
-            return False
         return self.x == other.x and self.y == other.y
 
     def __str__(self):

@@ -175,9 +175,11 @@ class SnakeGameAI(SnakeGame):
         self.statistic_board.grid(column=0, row=0)
         self.board.grid(column=1, row=0)
 
+        self.snake = self.population.get_snake()
+
     def init_game(self):
         """Initialize game objects and starts game"""
-        self.snake = self.population.get_snake()
+        self.in_game = True
         self.snake.draw(self.board)
 
         self.locate_apples()
@@ -225,7 +227,7 @@ class SnakeGameAI(SnakeGame):
         self.board.delete(tk.ALL)
         self.level = 1
         self.score = 0
-        self.in_game = True
+        self.snake.alive = False
 
         self.snake = self.population.next_snake()
         self.statistic_board.update_snake(self.population.snake_in_game_id)
@@ -244,13 +246,6 @@ class SnakeGameAI(SnakeGame):
 
         self.after_cancel(self.after_id)
         self.replay()
-
-
-def start_snake():
-    root = tk.Tk()
-    game = SnakeGame()
-    game.init_game()
-    root.mainloop()
 
 
 def start_snake_ai():
