@@ -78,7 +78,7 @@ class Const:
     MUTATION_RATE = .01
     CROSSOVER_RATE = 0.99
     MU, SIGMA = 0., 1.
-    VERSION = 1.1  # Change version when structure of neural network is changed
+    VERSION = 1.0
 
 
 class Position:

@@ -199,8 +199,8 @@ class Snake:
         future_pos = Position(self.head_x + self.direction.move_x * Const.SQUARE_SIZE,
                               self.head_y + self.direction.move_y * Const.SQUARE_SIZE)
 
-        if future_pos.x < 0 or future_pos.x > Const.G_B_W or \
-                future_pos.y < 0 or future_pos.y > Const.G_B_H:
+        if future_pos.x < 0 or future_pos.x > Const.G_B_W - Const.SQUARE_SIZE or \
+                future_pos.y < 0 or future_pos.y > Const.G_B_H - Const.SQUARE_SIZE:
             self.die()
 
     def change_direction(self, new_direction):
