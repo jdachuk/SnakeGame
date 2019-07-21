@@ -42,7 +42,7 @@ class Const:
     MIN_AI_DELAY = 1
     MAX_AI_DELAY = 256
     SQUARE_SIZE = 15
-    NUM_OF_SQUARES = 30
+    NUM_OF_SQUARES = 40
 
     G_F_S = 20  # Game Board font size
     G_F = ('no font', G_F_S)  # Game Board font
@@ -74,9 +74,9 @@ class Const:
                 Direction.SOUTH, Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST
             ]
 
-    POPULATION_SIZE = 2000
+    POPULATION_SIZE = 1000
     MUTATION_RATE = .01
-    CROSSOVER_RATE = 0.99
+    CROSSOVER_RATE = .8
     MU, SIGMA = 0., 1.
     VERSION = 1.0
 

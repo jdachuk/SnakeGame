@@ -73,7 +73,6 @@ class SnakeBrain:
         return clone
 
     def crossover(self, other):
-
         def weights_crossover(weights, other_w):
             child_w = np.random.random(weights.shape)
 
@@ -89,12 +88,25 @@ class SnakeBrain:
 
             return child_w
 
+        def mean_crossover(weights, other_w):
+            child_w = np.random.random(weights.shape)
+
+            for i in range(child_w.shape[0]):
+                for j in range(child_w.shape[1]):
+                    child_w[i][j] = (weights[i][j] + other_w[i][j]) / 2
+
+            return child_w
+
         child = SnakeBrain()
 
         if random.random() <= Const.CROSSOVER_RATE:
             child.w_i = weights_crossover(self.w_i, other.w_i)
             child.w_h = weights_crossover(self.w_h, other.w_h)
             child.w_o = weights_crossover(self.w_o, other.w_o)
+        else:
+            child.w_i = mean_crossover(self.w_i, other.w_i)
+            child.w_h = mean_crossover(self.w_h, other.w_h)
+            child.w_o = mean_crossover(self.w_o, other.w_o)
 
         return child
 
