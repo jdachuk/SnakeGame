@@ -76,7 +76,6 @@ class Const:
 
     POPULATION_SIZE = 1000
     MUTATION_RATE = .01
-    CROSSOVER_RATE = .8
     MU, SIGMA = 0., 1.
     VERSION = 1.0
 

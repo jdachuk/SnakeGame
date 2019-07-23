@@ -17,31 +17,29 @@ class SnakeBrain:
     VERSION = Const.VERSION
 
     @staticmethod
-    def sigmoid(x):
+    def activation(x):
         return 1 / (1 + np.exp(-x))
 
-    @staticmethod
-    def sigmoid_der(x):
-        return SnakeBrain.sigmoid(x) * (1 - SnakeBrain.sigmoid(x))
-
     def __init__(self):
-        self.w_i = 2 * np.random.random((25, 18)) - 1
-        self.w_h = 2 * np.random.random((19, 18)) - 1
-        self.w_o = 2 * np.random.random((19,  4)) - 1
+        self.w_i = np.random.standard_normal((18, 24))
+        self.w_h = np.random.standard_normal((18, 18))
+        self.w_o = np.random.standard_normal((4,  18))
+        self.b_i = np.random.standard_normal((18,))
+        self.b_h = np.random.standard_normal((18,))
+        self.b_o = np.random.standard_normal((4,))
 
     def analyze(self, input_data):
-        input_data = np.append(input_data, np.ones((1, 1)))  # add bias
+        input_activation = np.matmul(self.w_i, input_data)
+        input_activation = input_activation + self.b_i
+        input_activation = self.activation(input_activation)
 
-        input_activation = np.dot(input_data, self.w_i)
-        input_activation = self.sigmoid(input_activation)
-        input_activation = np.append(input_activation, np.ones((1, 1)))  # add bias
+        hidden_activation = np.matmul(self.w_h, input_activation)
+        hidden_activation = hidden_activation + self.b_h
+        hidden_activation = self.activation(hidden_activation)
 
-        hidden_activation = np.dot(input_activation, self.w_h)
-        hidden_activation = self.sigmoid(hidden_activation)
-        hidden_activation = np.append(hidden_activation, np.ones((1, 1)))  # add bias
-
-        output_activation = np.dot(hidden_activation, self.w_o)
-        output_activation = self.sigmoid(output_activation)
+        output_activation = np.matmul(self.w_o, hidden_activation)
+        output_activation = output_activation + self.b_o
+        output_activation = self.activation(output_activation)
 
         return output_activation
 
@@ -53,71 +51,94 @@ class SnakeBrain:
                         mutate_factor = np.random.normal(Const.MU, Const.SIGMA)
                         weights[i][j] += mutate_factor / 5
 
-                        if weights[i][j] > 1:
-                            weights[i][j] = 1
-                        elif weights[i][j] < -1:
-                            weights[i][j] = -1
-
             return weights
+
+        def bias_mutate(bias):
+            for i in range(bias.shape[0]):
+                if random.random() <= Const.MUTATION_RATE:
+                    mutate_factor = np.random.normal(Const.MU, Const.SIGMA)
+                    bias[i] += mutate_factor / 5
+            return bias
 
         self.w_i = weights_mutate(self.w_i)
         self.w_h = weights_mutate(self.w_h)
         self.w_o = weights_mutate(self.w_o)
+        self.b_i = bias_mutate(self.b_i)
+        self.b_h = bias_mutate(self.b_h)
+        self.b_o = bias_mutate(self.b_o)
 
     def clone(self):
         clone = SnakeBrain()
         clone.w_i = self.w_i
         clone.w_h = self.w_h
         clone.w_o = self.w_o
+        clone.b_i = self.b_i
+        clone.b_h = self.b_h
+        clone.b_o = self.b_o
 
         return clone
 
     def crossover(self, other):
-        def weights_crossover(weights, other_w):
+        def crop_w_crossover(weights, other_w):
             child_w = np.random.random(weights.shape)
 
-            rand_row = random.randint(0, child_w.shape[0])
-            rand_col = random.randint(0, child_w.shape[1])
+            start_row = random.randrange(0, child_w.shape[0])
+            end_row = random.randrange(start_row, child_w.shape[0])
+            start_col = random.randrange(0, child_w.shape[1])
+            end_col = random.randint(start_col, child_w.shape[1])
 
             for i in range(child_w.shape[0]):
                 for j in range(child_w.shape[1]):
-                    if i < rand_row or (i == rand_row and j <= rand_col):
+                    if (
+                            (i == start_row and j >= start_col)
+                            or start_row < i < end_row
+                            or (i == end_row and j <= end_col)
+                    ):
                         child_w[i][j] = weights[i][j]
                     else:
                         child_w[i][j] = other_w[i][j]
 
             return child_w
 
-        def mean_crossover(weights, other_w):
-            child_w = np.random.random(weights.shape)
+        def crop_b_crossover(bias, other_b):
+            child_b = np.random.standard_normal(bias.shape)
 
-            for i in range(child_w.shape[0]):
-                for j in range(child_w.shape[1]):
-                    child_w[i][j] = (weights[i][j] + other_w[i][j]) / 2
+            start = random.randrange(0, child_b.shape[0])
+            stop = random.randrange(start, child_b.shape[0])
 
-            return child_w
+            for i in range(child_b.shape[0]):
+                if stop >= i >= start:
+                    child_b[i] = bias[i]
+                else:
+                    child_b[i] = other_b[i]
+
+            return child_b
 
         child = SnakeBrain()
 
-        if random.random() <= Const.CROSSOVER_RATE:
-            child.w_i = weights_crossover(self.w_i, other.w_i)
-            child.w_h = weights_crossover(self.w_h, other.w_h)
-            child.w_o = weights_crossover(self.w_o, other.w_o)
-        else:
-            child.w_i = mean_crossover(self.w_i, other.w_i)
-            child.w_h = mean_crossover(self.w_h, other.w_h)
-            child.w_o = mean_crossover(self.w_o, other.w_o)
+        child.w_i = crop_w_crossover(self.w_i, other.w_i)
+        child.w_h = crop_w_crossover(self.w_h, other.w_h)
+        child.w_o = crop_w_crossover(self.w_o, other.w_o)
+        child.b_i = crop_b_crossover(self.b_i, other.b_i)
+        child.b_h = crop_b_crossover(self.b_h, other.b_h)
+        child.b_o = crop_b_crossover(self.b_o, other.b_o)
 
         return child
 
     def save_to_dict(self):
-        def to_py_arr(ndarray):
+        def w_to_arr(weights):
             array = []
-            for i in range(ndarray.shape[0]):
+            for i in range(weights.shape[0]):
                 row = []
-                for j in range(ndarray.shape[1]):
-                    row.append(ndarray[i][j])
+                for j in range(weights.shape[1]):
+                    row.append(weights[i][j])
                 array.append(row)
+            return array
+
+        def b_to_arr(bias):
+            array = []
+            for i in range(bias.shape[0]):
+                array.append(bias[i])
             return array
 
         result = {
@@ -125,9 +146,12 @@ class SnakeBrain:
             'weights_input_shape': self.w_i.shape,
             'weights_hidden_shape': self.w_h.shape,
             'weights_output_shape': self.w_o.shape,
-            'weights_input': to_py_arr(self.w_i),
-            'weights_hidden': to_py_arr(self.w_h),
-            'weights_output': to_py_arr(self.w_o)
+            'weights_input': w_to_arr(self.w_i),
+            'weights_hidden': w_to_arr(self.w_h),
+            'weights_output': w_to_arr(self.w_o),
+            'bias_input': b_to_arr(self.b_i),
+            'bias_hidden': b_to_arr(self.b_h),
+            'bias_output': b_to_arr(self.b_o)
         }
         return result
 
@@ -137,6 +161,9 @@ class SnakeBrain:
         self.w_i = np.array(dictionary['weights_input'])
         self.w_h = np.array(dictionary['weights_hidden'])
         self.w_o = np.array(dictionary['weights_output'])
+        self.b_i = np.array(dictionary['bias_input'])
+        self.b_h = np.array(dictionary['bias_hidden'])
+        self.b_o = np.array(dictionary['bias_output'])
 
 
 class Snake:
@@ -268,15 +295,18 @@ class SmartSnake(Snake):
         return Const.DIRECTION_KEYS[d_idx]
 
     def look(self):
-        data = np.ndarray((0, 0))
+        data = None
 
         for direction in Const.DIRECTIONS:
-            data = np.append(data, self.look_in_direction(direction))
+            if data is None:
+                data = self.look_in_direction(direction)
+            else:
+                data = np.append(data, self.look_in_direction(direction))
 
-        return np.array([data])
+        return np.array([data]).reshape((24,))
 
     def look_in_direction(self, direction):
-        data = np.zeros((3, 1))
+        data = np.zeros((3,))
         position = Position(self.head_x, self.head_y)
 
         distance = 0
