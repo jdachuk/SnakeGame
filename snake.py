@@ -15,18 +15,22 @@ from game_objects import SnakeHead, SnakeTail
 
 class SnakeBrain:
     VERSION = Const.VERSION
+    INPUTS = 18
+    N_FIRST_HIDDEN = 12
+    N_SECOND_HIDDEN = 12
+    OUTPUTS = 4
 
     @staticmethod
     def activation(x):
         return 1 / (1 + np.exp(-x))
 
     def __init__(self):
-        self.w_i = np.random.standard_normal((18, 24))
-        self.w_h = np.random.standard_normal((18, 18))
-        self.w_o = np.random.standard_normal((4,  18))
-        self.b_i = np.random.standard_normal((18,))
-        self.b_h = np.random.standard_normal((18,))
-        self.b_o = np.random.standard_normal((4,))
+        self.w_i = np.random.standard_normal((self.N_FIRST_HIDDEN, self.INPUTS))
+        self.w_h = np.random.standard_normal((self.N_SECOND_HIDDEN, self.N_FIRST_HIDDEN))
+        self.w_o = np.random.standard_normal((self.OUTPUTS,  self.N_SECOND_HIDDEN))
+        self.b_i = np.random.standard_normal((self.N_FIRST_HIDDEN,))
+        self.b_h = np.random.standard_normal((self.N_SECOND_HIDDEN,))
+        self.b_o = np.random.standard_normal((self.OUTPUTS,))
 
     def analyze(self, input_data):
         input_activation = np.matmul(self.w_i, input_data)
@@ -301,15 +305,20 @@ class SmartSnake(Snake):
             if data is None:
                 data = self.look_in_direction(direction)
             else:
-                data = np.append(data, self.look_in_direction(direction))
+                if direction not in [Direction.WEST, Direction.NORTH]:
+                    data = np.append(data, self.look_in_direction(direction)[:2])
+                else:
+                    data = np.append(data, self.look_in_direction(direction))
 
-        return np.array([data]).reshape((24,))
+        return np.array([data]).reshape((self.brain.INPUTS, ))
 
     def look_in_direction(self, direction):
-        data = np.zeros((3,))
+        data = np.zeros((3, ))
         position = Position(self.head_x, self.head_y)
 
         distance = 0
+        tail_found = False
+        apple_found = False
 
         while 0 < position.x < Const.G_B_W and 0 < position.y < Const.G_B_H:
             distance += 1
@@ -317,12 +326,16 @@ class SmartSnake(Snake):
             item = self.canvas.find_in_position(position + Const.SQUARE_SIZE // 2)
             if len(item) > 0:
                 item_tag = self.canvas.gettags(item)
-                if 'apple' in item_tag:
+                if not apple_found and 'apple' in item_tag:
+                    apple_found = True
                     data[0] = 1 / distance
-                    break
-                elif 'tail' in item_tag:
+                elif not tail_found and 'tail' in item_tag:
+                    tail_found = True
                     data[1] = 1 / distance
-                    break
+
+            if tail_found and apple_found:
+                break
+
         else:
             data[2] = 1 / distance
 

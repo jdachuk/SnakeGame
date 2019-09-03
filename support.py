@@ -16,8 +16,10 @@ class Move:
             return Move(self.move_x * other, self.move_y * other)
         elif isinstance(other, Move):
             return Move(self.move_x * other.move_x, self.move_y * other.move_y)
+        else:
+            raise ValueError(f'Not supported operation with type {type(other)}')
 
-    def __str__(self):
+    def __repr__(self):
         return f'{self.move_x, self.move_y}'
 
 
@@ -89,6 +91,8 @@ class Position:
     def __sub__(self, other):
         if isinstance(other, Position):
             return Move(self.x - other.x, self.y - other.y)
+        else:
+            raise ValueError(f'Not supported operation with type {type(other)}')
 
     def __add__(self, other):
         if isinstance(other, Position):
@@ -97,15 +101,22 @@ class Position:
             return Position(self.x + other.move_x, self.y + other.move_y)
         elif isinstance(other, int):
             return Position(self.x + other, self.y + other)
+        else:
+            raise ValueError(f'Not supported operation with type {type(other)}')
 
     def __mul__(self, other):
         if isinstance(other, int):
             return Position(self.x * other, self.y * other)
         elif isinstance(other, Position):
             return Position(self.x * other.x, self.y * other.y)
+        else:
+            raise ValueError(f'Not supported operation with type {type(other)}')
 
     def __eq__(self, other):
-        return self.x == other.x and self.y == other.y
+        if isinstance(other, Position):
+            return self.x == other.x and self.y == other.y
+        else:
+            raise ValueError(f'Not supported operation with type {type(other)}')
 
-    def __str__(self):
+    def __repr__(self):
         return f'({self.x}, {self.y})'
